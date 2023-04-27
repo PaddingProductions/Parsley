@@ -1,10 +1,14 @@
+use std::collections::VecDeque;
+
+pub type Tokens = VecDeque<Token>;
+
 #[derive(Debug, Clone, Copy)]
 pub enum TokenType {
     Num,
     Boolean,
     Operator,
     Identifier,
-    End
+    EOF 
 }
 
 #[derive(Debug)]

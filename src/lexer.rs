@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::tokens::*;
 
 pub struct Lexer {
@@ -13,30 +15,30 @@ impl Lexer {
         s == "+" || s == "-" || s == "*" || s == "/" || s == "=" || s == "?" || s == ":"
     }
     
-    pub fn lex (self) -> Result<Vec<Token>, String> {
-        let mut v = vec![];
-        for word in self.str.split(' ') {
+    pub fn lex (self) -> Result<VecDeque<Token>, String> {
+        let mut v = VecDeque::new(); 
+        for word in self.str.split([' ','\n','\r','\t']) {
             if word.parse::<usize>().is_ok() {
-                v.push( Token {
+                v.push_back( Token {
                     typ: TokenType::Num,
                     str: word.to_string()
                 });
             }
             else if Self::is_operator(word) {
-                v.push( Token {
+                v.push_back( Token {
                     typ: TokenType::Operator,
                     str: word.to_string()
                 });
             }
-            else {
-                v.push( Token {
+            else if word.len() > 0 {
+                v.push_back( Token {
                     typ: TokenType::Identifier,
                     str: word.to_string()
                 });
             };
         }
-        v.push( Token { 
-            typ:TokenType::End, 
+        v.push_back( Token { 
+            typ:TokenType::EOF, 
             str: String::from("")
         });
 

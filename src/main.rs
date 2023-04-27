@@ -1,3 +1,5 @@
+use std::io::{ self, BufRead };
+
 mod tokens;
 mod ast;
 mod lexer;
@@ -9,13 +11,21 @@ use parser::Parser;
 use interpreter::Interpreter;
 
 fn main () {
-    let str = "1 + 2 * 5 + 4 / 3";
+    let mut buf = String::with_capacity(128);
+    let mut stdin = io::stdin().lock();
 
-    let tokens = Lexer::from_str(str.to_string()).lex().expect("Lexing failed");
-    println!("=== Lexer Done, Result: {:?} ===", tokens);
-    let instructions = Parser::from(tokens).parse();
-    println!("=== Parser Done ===");
-    let mut interpreter = Interpreter::new();
-    interpreter.interpret(instructions);
-    println!("=== Interpreter Done ===");
+    loop {
+        stdin.read_line(&mut buf).expect("STDIO failed");
+        
+        let tokens = Lexer::from_str(buf.to_string()).lex().expect("Lexing failed");
+        println!("Tokens: {:?}", tokens);
+        println!("=== Lexer Done ===\n");
+
+        let instructions = Parser::from(tokens).parse();
+        println!("=== Parser Done ===\n");
+
+        let mut interpreter = Interpreter::new();
+        interpreter.interpret(instructions);
+        println!("=== Interpreter Done ===\n");
+    }
 }

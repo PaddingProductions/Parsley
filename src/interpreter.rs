@@ -2,43 +2,60 @@ use std::boxed::Box;
 
 use crate::ast::*;
 
-pub struct Interpreter {}
+pub struct Environment {}
+impl Environment {
+    pub fn new () -> Self { Self {} }
+}
 
-impl Interpreter {
-    pub fn new () -> Interpreter {
-        Interpreter { }
+impl Operation for Expr {
+    fn exec (&self, env: &mut Environment) -> bool {
+        println!("Expr Operation returned: {}", self.eval(env)); 
+        true
     }
+}
 
-    pub fn interpret (&mut self, instructions: Vec<Box<dyn Instruction>>) {
-        for instruct in instructions.iter() {
-            let expr: &Expression = instruct.as_any().downcast_ref::<Expression>().expect("Instruction Not Expression");
-            println!("Eval result: {}\n", self.exec(expr));
-        }
+impl Evaluable for i64 {
+    fn eval (&self, _: &mut Environment) -> Self { 
+        println!("num literal, returning: {}", *self);
+        *self
     }
-
-    fn exec (&mut self, expr: &Expression) -> usize {
-        let mut res = 0;
-        for operation in expr.terms.iter() {
-            let term =
-                if let Evaluable::Literal( literal ) = operation.term {
-                    literal
-                    //println!("Op on Literal: {:?} {:?}", operation.op, literal);
-                }  
-                else if let Evaluable::Expr( expr ) = &operation.term {
-                    //println!("Op on Expression: {:?}, recursing", operation.op);
-                    self.exec(&expr)
-                }
-                else {
-                    panic!("Term with no evaluation method defined");
-                };
-            match operation.op.as_str() {
-                "+" => res += term,
-                "-" => res -= term,
-                "*" => res *= term,
-                "/" => res /= term,
-                _ => panic!("Unknown operator")
+}
+impl Evaluable for Expr {
+    fn eval (&self, env: &mut Environment) -> i64 {
+        let mut res: i64 = 0;
+        for term in self.terms() {
+            println!("evaluating term: op: {:?}, recursing", term.0);
+            let val = term.1.eval(env);
+            match term.0 {
+                Operator::Plus  => res += val, 
+                Operator::Minus => res -= val, 
+                Operator::Multi => res *= val, 
+                Operator::Div   => res /= val, 
             }
         }
-        res 
+        res
+    }   
+}
+
+
+impl Operation for Assignment {
+    fn exec (&self, env: &mut Environment) -> bool {
+        // TODO
+        true
+    }
+}
+
+pub struct Interpreter {
+    pub env: Environment
+}
+impl Interpreter {
+    pub fn new () -> Self {
+        Self { env: Environment::new() }
+    }
+
+    pub fn interpret (&mut self, instructions: Vec<Box<dyn Operation>>) {
+        for instruct in instructions.iter() {
+            instruct.exec(&mut self.env); 
+        }
     }
 }
