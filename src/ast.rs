@@ -1,5 +1,6 @@
 use crate::interpreter::Environment;
-use crate::tokens::Tokens;
+use crate::tokens::TokIter;
+use crate::parser::ParserRes;
 
 pub trait Operation {
     fn exec (&self, env: &mut Environment) -> bool;
@@ -11,7 +12,7 @@ pub trait Evaluable {
 
 pub trait Extractable {
     type T;
-    fn extract (tok: &mut Tokens) -> Result<Self::T, ()>;
+    fn extract<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Self::T>;
 }
 
 #[derive(Debug)]
@@ -19,7 +20,14 @@ pub enum Operator {
     Plus,
     Minus,
     Multi,
-    Div
+    Div,
+    Equal
+}
+
+#[derive(Debug)]
+pub enum Term {
+    Num (i64),
+    Ident (String)
 }
 
 pub struct Expr {
@@ -42,5 +50,6 @@ impl Expr {
 
 
 pub struct Assignment {
-
+    pub ident: String,
+    pub expr: Box<dyn Evaluable>
 }

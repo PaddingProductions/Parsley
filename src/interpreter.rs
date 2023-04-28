@@ -1,36 +1,51 @@
 use std::boxed::Box;
+use std::collections::HashMap;
 
 use crate::ast::*;
 
-pub struct Environment {}
+pub trait Value {}
+
+pub struct Environment {
+    vars: HashMap<String, i64>
+}
+
 impl Environment {
-    pub fn new () -> Self { Self {} }
+    pub fn new () -> Self { 
+        Self {
+            vars: HashMap::new()
+        } 
+    }
 }
 
 impl Operation for Expr {
     fn exec (&self, env: &mut Environment) -> bool {
-        println!("Expr Operation returned: {}", self.eval(env)); 
+        println!("Expr Evaluated to: {}", self.eval(env)); 
         true
     }
 }
 
-impl Evaluable for i64 {
-    fn eval (&self, _: &mut Environment) -> Self { 
-        println!("num literal, returning: {}", *self);
-        *self
+impl Evaluable for Term {
+    fn eval (&self, env: &mut Environment) -> i64 { 
+        use Term::*;
+        match self {
+            Num(num)        => *num,
+            Ident(ident)    => *env.vars.get(ident).expect("Use of undefined identifier.")
+        }
     }
 }
+
 impl Evaluable for Expr {
     fn eval (&self, env: &mut Environment) -> i64 {
         let mut res: i64 = 0;
         for term in self.terms() {
-            println!("evaluating term: op: {:?}, recursing", term.0);
+            //println!("evaluating term: op: {:?}, recursing", term.0);
             let val = term.1.eval(env);
             match term.0 {
                 Operator::Plus  => res += val, 
                 Operator::Minus => res -= val, 
                 Operator::Multi => res *= val, 
                 Operator::Div   => res /= val, 
+                _ => panic!("Unexpected non-arithmetic operator")
             }
         }
         res
@@ -40,7 +55,9 @@ impl Evaluable for Expr {
 
 impl Operation for Assignment {
     fn exec (&self, env: &mut Environment) -> bool {
-        // TODO
+        let val  = self.expr.eval(env);
+        let prev = env.vars.insert(self.ident.clone(), val);
+        println!("Wrote from {:?} -> {} to identifier {}", prev, val, self.ident);
         true
     }
 }

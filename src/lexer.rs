@@ -18,21 +18,23 @@ impl Lexer {
     pub fn lex (self) -> Result<VecDeque<Token>, String> {
         let mut v = VecDeque::new(); 
         for word in self.str.split([' ','\n','\r','\t']) {
+            use TokenType::*;
+
             if word.parse::<usize>().is_ok() {
                 v.push_back( Token {
-                    typ: TokenType::Num,
+                    typ: Num,
                     str: word.to_string()
                 });
             }
             else if Self::is_operator(word) {
                 v.push_back( Token {
-                    typ: TokenType::Operator,
+                    typ: Operator,
                     str: word.to_string()
                 });
             }
             else if word.len() > 0 {
                 v.push_back( Token {
-                    typ: TokenType::Identifier,
+                    typ: Ident,
                     str: word.to_string()
                 });
             };

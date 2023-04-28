@@ -1,11 +1,29 @@
 use std::boxed::Box;
-use std::collections::VecDeque;
 
 use crate::tokens::*;
 use crate::ast::*;
 
+mod core;
 mod expr;
 mod assign;
+
+#[derive(Debug)]
+pub struct ParserErr {
+    msg: String
+}
+impl ParserErr {
+    pub fn new (s: &str) -> Self {
+        Self { msg: s.to_string() }
+    }
+}
+impl std::fmt::Display for ParserErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Parser Err: {}", self.msg)
+    }
+}
+impl std::error::Error for ParserErr {}
+
+pub type ParserRes<'a, T> = Result<(TokIter<'a>, T), ParserErr>;
 
 // Grammars
 // prog : (op)* EOF 
@@ -21,28 +39,35 @@ mod assign;
 //
 
 pub struct Parser {
-    tokens: VecDeque<Token>,
+    tokens: Tokens,
 }
 
 impl Parser {
-    pub fn from (tokens: VecDeque<Token>) -> Parser {
+    pub fn from (tokens: Tokens) -> Parser {
         Parser{ tokens }
     }
 
-    pub fn parse (mut self) -> Vec<Box<dyn Operation>> { 
+    pub fn parse (self) -> Vec<Box<dyn Operation>> { 
         let mut list: Vec<Box<dyn Operation>> = vec![];
-        while !matches!(self.tokens[0].typ, TokenType::EOF) {
-            list.push(self.operation());
+        let mut iter = self.tokens.iter().peekable();
+        while iter.peek().is_some() && !matches!(iter.peek().unwrap().typ, TokenType::EOF) {
+            if let Ok((t, o)) = Self::operation(&iter) {
+                iter = t;
+                list.push(o);
+            } else { break; }
         }
         list
     }
 
-    fn operation (&mut self) -> Box<dyn Operation> {
-        let tok = &mut self.tokens;
-        if let Ok(op) = Assignment::from(tok) {
-            Box::new( op )
-        } else {
-            Box::new( Expr::extract(tok).expect("No valid grammars found in parsing 'operation()'") )
+    fn operation<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Box<dyn Operation>> {
+        if let Ok((tok, o)) = Assignment::extract(tok) {
+            Ok((tok, Box::new(o)))
+        } else 
+        if let Ok((tok, o)) = Expr::extract(tok) {
+            Ok((tok, Box::new(o)))
+        }
+        else {
+            panic!("No valid operation found");
         }
     }
 }

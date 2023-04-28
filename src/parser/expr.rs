@@ -1,5 +1,7 @@
-use crate::tokens::{Tokens, TokenType};
+use crate::tokens::TokIter;
+use super::{ParserRes, ParserErr};
 use crate::ast::*;
+use super::core::*; 
 
 // expr : expr1
 // expr1    : expr2 ((+|-) expr1)* 
@@ -8,63 +10,63 @@ use crate::ast::*;
 // expr2    : term ((*|/) expr2)*
 //          ;
 //
-fn or<T, A> (tok: &mut Tokens, func: &dyn Fn( &mut Tokens, A ) -> Result<T, ()>, opts: Vec<A>) -> Result<T, ()> {
-    for opt in opts {
-        if let Ok(res) = func(tok, opt) {
-            return Ok(res); 
-        }
-    }
-    Err(())
-}
-
-fn operator (tok: &mut Tokens, s: String) -> Result<Operator, ()> {
-    if tok[0].str() != s {
-        Err(()) 
+fn term<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Term> {
+    if let Ok((tok, num)) = num(tok) {
+        Ok((tok, Term::Num(num)))
+    } 
+    else if let Ok((tok, ident)) = ident(tok) {
+        Ok((tok, Term::Ident(ident)))
     } else {
-        let op = match s.as_str() {
-            "+" => Operator::Plus,
-            "-" => Operator::Minus,
-            "*" => Operator::Multi,
-            "/" => Operator::Div,
-            _ => return Err(())
-        };
-        tok.pop_front();
-        Ok(op)
+        Err(ParserErr::new("Unable to find valid 'term' grammar"))
     }
-}
-
-fn num (tok: &mut Tokens) -> Result<i64, ()> {
-    if !matches!(tok[0].typ, TokenType::Num) {
-        return Err(())
-    }
-    if let Ok(num) = tok[0].str().parse::<i64>() {
-        tok.pop_front();
-        return Ok(num);
-    }
-    return Err(());
 }
 
 impl Extractable for Expr {
-    type T  = Self;
-    fn extract (tok: &mut Tokens) -> Result<Self::T, ()> {
-        let t0 = Self::expr2(tok)?;
+    type T = Self;
+    fn extract<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Expr> {
+        println!("attempting to extract 'expr'");
+        let tok: TokIter<'b> = tok.clone();
+        let (mut tok, t0): (TokIter<'b>, Expr) = Self::expr2(&tok)?;
         let mut v: Vec<(Operator, Box<dyn Evaluable>)> = vec![(Operator::Plus, Box::new(t0))];
-        while let Ok(op) = or::<Operator, String> (tok, &operator, vec!["-".to_string(), "+".to_string()]) {
-            let t = Self::expr2(tok)?;
+        loop {
+            let op = match
+                operator(&tok, "+") .or(
+                operator(&tok, "-")) 
+            {
+                Ok((t, o)) => { tok = t; o},
+                Err(_) => break
+            };
+            let t = match Self::expr2(&tok) {
+                Ok((t, o)) => { tok = t; o},
+                Err(e) => return Err(e)
+            };
             v.push((op, Box::new(t)));
         }
-        Ok(Self::from(v))
+        Ok((tok, Self::from(v)))
     }
 }
 
 impl Expr {
-    fn expr2 (tok: &mut Tokens) -> Result<Self, ()> {
-        let t0 = num(tok)?;
+    fn expr2<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Expr> {
+        println!("attempting to extract 'expr2'");
+        let tok = tok.clone();
+        let (mut tok, t0) = term(&tok)?;
         let mut v: Vec<(Operator, Box<dyn Evaluable>)> = vec![(Operator::Plus, Box::new(t0))];
-        while let Ok(op) = or::<Operator, String> (tok, &operator, vec!["*".to_string(), "/".to_string()]) {
-            let t = num(tok)?;
+        loop {
+            let op = match  
+                operator(&tok, "*") .or( 
+                operator(&tok, "/")).or(
+                operator(&tok, "%")) 
+            {
+                Ok((t, o)) => {tok = t; o},
+                Err(_) => break
+            };
+             let t = match term(&tok) {
+                Ok((t, o)) => {tok = t; o},
+                Err(e) => return Err(e)
+            };
             v.push((op, Box::new(t)));
         }
-        Ok(Self::from(v))
+        Ok((tok, Self::from(v)))    
     }
 }

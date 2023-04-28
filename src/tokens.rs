@@ -1,13 +1,16 @@
 use std::collections::VecDeque;
+use std::collections::vec_deque::Iter;
+use std::iter::Peekable;
 
 pub type Tokens = VecDeque<Token>;
+pub type TokIter<'a> = Peekable<Iter<'a, Token>>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum TokenType {
     Num,
     Boolean,
     Operator,
-    Identifier,
+    Ident,
     EOF 
 }
 
