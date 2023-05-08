@@ -1,35 +1,59 @@
-use std::io::{ self, BufRead, Write };
+use std::io::{self, BufRead};
 
-mod tokens;
 mod ast;
-mod lexer;
 mod parser;
 mod interpreter;
 
-use lexer::Lexer;
 use parser::Parser;
-use interpreter::Interpreter;
+use parser::operation::operation;
 
 fn main () {
-    let mut stdout = io::stdout().lock();
     let mut stdin = io::stdin().lock();
-    let mut interpreter = Interpreter::new();
 
     loop {
-        print!("syn > ");
-        stdout.flush().unwrap();
-       
-        let mut buf = String::with_capacity(128);
-        stdin.read_line(&mut buf).expect("STDIO failed");
-        
-        let tokens = Lexer::from_str(buf).lex().expect("Lexing failed");
-        println!("Tokens: {:?}", tokens);
-        println!("=== Lexer Done ===\n");
+        let mut buf = String::with_capacity(100);
+        stdin.read_line(&mut buf).expect("STDIN failed");
+        let s: &str = buf.as_str();
+        if let Ok((_, op)) = operation().parse(s) {
+            op.exec();
+        };
+    }
+}
 
-        let instructions = Parser::from(tokens).parse();
-        println!("=== Parser Done ===\n");
+#[cfg(test)]
+mod tests {
+    use crate::parser::*;
+    use crate::parser::core::parse_literal;
 
-        interpreter.interpret(instructions);
-        println!("=== Interpreter Done ===\n");
+
+    #[test]
+    fn test_parse_literal () {
+        let input = "joemama";
+        let parse_joe = parse_literal("joe");
+        assert_eq!(Ok(("mama", "joe")), parse_joe.parse(input));
+    }
+
+    use crate::parser::operation::operation;
+    #[test]
+    fn test_operation () {
+        let input = "joe biden";
+        let op = operation().parse(input); 
+        op.unwrap().1.exec();
+    }
+
+    use crate::ast::Expression;
+    use crate::parser::expr::expression;
+    #[test]
+    fn test_expression_parse () {
+        let input = "1+2";
+        let expr = expression().parse(input); 
+        assert_eq!(Ok(("", Expression { t0: 1.0, v: vec![('+', 2.0)] })), expr);
+    }
+
+    #[test]
+    fn test_expression_operation () {
+        let input = "1+2";
+        let op = operation().parse(input); 
+        op.unwrap().1.exec();
     }
 }

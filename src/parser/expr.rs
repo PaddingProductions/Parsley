@@ -1,72 +1,37 @@
-use crate::tokens::TokIter;
-use super::{ParserRes, ParserErr};
-use crate::ast::*;
-use super::core::*; 
+use super::*;
+use super::core::*;
+use crate::ast::Expression;
 
-// expr : expr1
-// expr1    : expr2 ((+|-) expr1)* 
-//          ;
-//
-// expr2    : term ((*|/) expr2)*
-//          ;
-//
-fn term<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Term> {
-    if let Ok((tok, num)) = num(tok) {
-        Ok((tok, Term::Num(num)))
-    } 
-    else if let Ok((tok, ident)) = ident(tok) {
-        Ok((tok, Term::Ident(ident)))
-    } else {
-        Err(ParserErr::new("Unable to find valid 'term' grammar"))
+pub fn expression<'a> () -> impl Parser<'a, Expression> {
+    move |buf| -> ParseRes<'a, Expression> {
+        let parse_num = parse_number();
+        let parse_op = parse_literal("+");
+
+        let (mut buf, t0) = parse_num.parse(buf)?;
+
+        let mut t = 0.0;
+        let mut v = vec![];
+        while let Ok((mut _buf, op)) = parse_op.parse(buf) {
+            (_buf, t) = parse_num.parse(_buf)?;
+            v.push((op.chars().next().unwrap(), t));
+
+            buf = _buf;
+        }
+
+        Ok((buf, Expression::new(t0, v)))
     }
 }
 
-impl Extractable for Expr {
-    type T = Self;
-    fn extract<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Expr> {
-        println!("attempting to extract 'expr'");
-        let tok: TokIter<'b> = tok.clone();
-        let (mut tok, t0): (TokIter<'b>, Expr) = Self::expr2(&tok)?;
-        let mut v: Vec<(Operator, Box<dyn Evaluable>)> = vec![(Operator::Plus, Box::new(t0))];
-        loop {
-            let op = match
-                operator(&tok, "+") .or(
-                operator(&tok, "-")) 
-            {
-                Ok((t, o)) => { tok = t; o},
-                Err(_) => break
-            };
-            let t = match Self::expr2(&tok) {
-                Ok((t, o)) => { tok = t; o},
-                Err(e) => return Err(e)
-            };
-            v.push((op, Box::new(t)));
-        }
-        Ok((tok, Self::from(v)))
+pub struct ExpressionOperation {
+    expr: Expression
+}
+impl Operation for ExpressionOperation {
+    fn exec(&self) {
+        println!("expression evaluated to: {}", self.expr.eval());
     }
 }
 
-impl Expr {
-    fn expr2<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Expr> {
-        println!("attempting to extract 'expr2'");
-        let tok = tok.clone();
-        let (mut tok, t0) = term(&tok)?;
-        let mut v: Vec<(Operator, Box<dyn Evaluable>)> = vec![(Operator::Plus, Box::new(t0))];
-        loop {
-            let op = match  
-                operator(&tok, "*") .or( 
-                operator(&tok, "/")).or(
-                operator(&tok, "%")) 
-            {
-                Ok((t, o)) => {tok = t; o},
-                Err(_) => break
-            };
-             let t = match term(&tok) {
-                Ok((t, o)) => {tok = t; o},
-                Err(e) => return Err(e)
-            };
-            v.push((op, Box::new(t)));
-        }
-        Ok((tok, Self::from(v)))    
-    }
+use crate::ast::Operation;
+pub fn expr_to_op (expr: Expression) -> Box<dyn Operation> {
+    Box::new(ExpressionOperation { expr })
 }

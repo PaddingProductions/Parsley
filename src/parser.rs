@@ -1,73 +1,32 @@
-use std::boxed::Box;
+pub mod core;
+pub mod expr;
+pub mod operation;
 
-use crate::tokens::*;
-use crate::ast::*;
-
-mod core;
-mod expr;
-mod assign;
-
-#[derive(Debug)]
-pub struct ParserErr {
+#[derive(Debug, PartialEq, Eq)]
+pub struct ParseErr {
     msg: String
 }
-impl ParserErr {
+impl ParseErr {
     pub fn new (s: &str) -> Self {
         Self { msg: s.to_string() }
     }
 }
-impl std::fmt::Display for ParserErr {
+impl std::fmt::Display for ParseErr {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Parser Err: {}", self.msg)
     }
 }
-impl std::error::Error for ParserErr {}
+impl std::error::Error for ParseErr {}
 
-pub type ParserRes<'a, T> = Result<(TokIter<'a>, T), ParserErr>;
-
-// Grammars
-// prog : (op)* EOF 
-// term : BOOL
-//      | NUM
-//      | IDENT
-//
-// op   : expr
-//      | assign
-//
-// expr : <expr.rs>
-// assign   : <assign.rs>
-//
-
-pub struct Parser {
-    tokens: Tokens,
+pub type ParseRes<'a, T> = Result<(&'a str, T), ParseErr>;
+pub trait Parser<'a, T> {
+    fn parse (&self, s: &'a str) -> ParseRes<'a, T>;
 }
-
-impl Parser {
-    pub fn from (tokens: Tokens) -> Parser {
-        Parser{ tokens }
-    }
-
-    pub fn parse (self) -> Vec<Box<dyn Operation>> { 
-        let mut list: Vec<Box<dyn Operation>> = vec![];
-        let mut iter = self.tokens.iter().peekable();
-        while iter.peek().is_some() && !matches!(iter.peek().unwrap().typ, TokenType::EOF) {
-            if let Ok((t, o)) = Self::operation(&iter) {
-                iter = t;
-                list.push(o);
-            } else { break; }
-        }
-        list
-    }
-
-    fn operation<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Box<dyn Operation>> {
-        if let Ok((tok, o)) = Assignment::extract(tok) {
-            Ok((tok, Box::new(o)))
-        } else 
-        if let Ok((tok, o)) = Expr::extract(tok) {
-            Ok((tok, Box::new(o)))
-        }
-        else {
-            panic!("No valid operation found");
-        }
+impl<'a, F, T> Parser<'a, T> for F 
+where
+    F: Fn (&'a str) -> ParseRes<T>
+{
+    fn parse (&self, input: &'a str) -> ParseRes<'a, T> {
+        self(input)
     }
 }

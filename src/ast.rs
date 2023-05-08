@@ -1,55 +1,41 @@
-use crate::interpreter::Environment;
-use crate::tokens::TokIter;
-use crate::parser::ParserRes;
-
 pub trait Operation {
-    fn exec (&self, env: &mut Environment) -> bool;
+    fn exec (&self);
 }
 
-pub trait Evaluable {
-    fn eval (&self, env: &mut Environment) -> i64;
+pub struct PrintOperation {
+    s: String
 }
-
-pub trait Extractable {
-    type T;
-    fn extract<'a, 'b> (tok: &'a TokIter<'b>) -> ParserRes<'b, Self::T>;
-}
-
-#[derive(Debug)]
-pub enum Operator {
-    Plus,
-    Minus,
-    Multi,
-    Div,
-    Equal
-}
-
-#[derive(Debug)]
-pub enum Term {
-    Num (i64),
-    Ident (String)
-}
-
-pub struct Expr {
-    v: Vec<(Operator, Box<dyn Evaluable>)>
-}
-
-
-impl Expr {
-    pub fn from (v: Vec<(Operator, Box<dyn Evaluable>)>) -> Self {
-        if v.is_empty() {
-            panic!("Empty vector passed to Expr::from()");
-        }
-        if !matches!(v[0].0, Operator::Plus) {
-            panic!("First term passed to Expr::from() does not have Operator::Plus");
-        }
-        Self { v }
+impl PrintOperation {
+    pub fn new (s: &str) -> Self {
+        Self { s: String::from(s) }
     }
-    pub fn terms (&self) -> &Vec<(Operator, Box<dyn Evaluable>)> { &self.v } 
+}
+impl Operation for PrintOperation {
+    fn exec(&self) {
+        println!("{}", self.s);
+    }
 }
 
-
-pub struct Assignment {
-    pub ident: String,
-    pub expr: Box<dyn Evaluable>
+#[derive(PartialEq, Debug)]
+pub struct Expression {
+    pub t0: f64,
+    pub v: Vec<(char, f64)>
+}
+impl Expression {
+    pub fn new (t0: f64, v: Vec<(char, f64)>) -> Self {
+        Self { t0, v }
+    }
+    pub fn eval (&self) -> f64 {
+        let mut res = self.t0;
+        for (op_c, v) in self.v.iter() {
+            match op_c {
+                '+' => res += v,
+                '*' => res *= v,
+                '-' => res -= v,
+                '/' => res /= v,
+                _ => panic!("invalid operator character found in expression")
+            }
+        }
+        res
+    }
 }
