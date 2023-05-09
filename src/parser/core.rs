@@ -6,31 +6,64 @@ pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
             if s == lit {
                 Ok((&input[lit.len()..], lit))
             } else {
-                Err(ParseErr::new("Literal not found"))
+                par_err("Literal not found")
             }
-        _ => Err(ParseErr::new("Literal not found"))
+        _ => par_err("Literal not found")
     } 
 }
 
-pub fn parse_number<'a> () -> impl Parser<'a, f64> {
+
+pub fn parse_tok_with_rule<'a, R> (rule: R) -> impl Parser<'a, String> 
+where
+    R: Fn (char) -> bool
+{
     move |input: &'a str| {
         let mut tok = String::new();
         let mut iter = input.chars();
 
-
         match iter.next() {
-            Some(c) if c.is_alphanumeric() => tok.push(c),
-            _ => return Err(ParseErr::new("non-alphanumeric character found. expected number."))
+            Some(c) if rule(c) => tok.push(c),
+            _ => return par_err("First character does not satisfy rule")
         }
         while let Some(c) = iter.next() {
-            if c.is_digit(10) || c == '.' {
+            if rule(c) {
                 tok.push(c);
             } else { break }
         }
-        if let Ok(num) = tok.parse::<f64>() {
-            Ok((&input[tok.len()..], num))
+        if tok.is_empty() {
+            par_err("Empty Token.")
         } else {
-            Err(ParseErr::new("failed to parse number"))
+            Ok((&input[tok.len()..], tok))
+        }
+    }
+}
+
+
+pub fn parse_number<'a> () -> impl Parser<'a, f64> {
+    move |input: &'a str| {
+        let num_rule = |c: char| {
+            c.is_ascii_digit() || c == '.'
+        };
+        let (buf, tok) = parse_tok_with_rule(num_rule).parse(input)?;
+        if let Ok(num) = tok.parse::<f64>() {
+            Ok((buf, num))
+        } else {
+            par_err("could not parse into number")
+        }
+    }
+}
+
+pub fn parse_identifier<'a> () -> impl Parser<'a, String> {
+    move |input: &'a str| {
+        let rule = |c: char| {
+            c.is_alphanumeric() || c == '_'
+        };
+        let (buf, tok) = parse_tok_with_rule(rule).parse(input)?;
+
+        if !tok.chars().next().unwrap().is_ascii_digit() {
+            Ok((buf, tok))
+        } else {
+            par_err("identifier cannot start with digit")
         }
     }
 }

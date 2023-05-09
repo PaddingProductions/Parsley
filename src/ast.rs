@@ -1,5 +1,7 @@
+use crate::interpreter::Environment;
+
 pub trait Operation {
-    fn exec (&self);
+    fn exec (&self, env: &mut Environment);
 }
 
 pub struct PrintOperation {
@@ -11,9 +13,13 @@ impl PrintOperation {
     }
 }
 impl Operation for PrintOperation {
-    fn exec(&self) {
+    fn exec(&self, env: &mut Environment) {
         println!("{}", self.s);
     }
+}
+
+pub struct Block {
+    pub ops: Vec<Box<dyn Operation>>
 }
 
 #[derive(PartialEq, Debug)]
@@ -21,21 +27,21 @@ pub struct Expression {
     pub t0: f64,
     pub v: Vec<(char, f64)>
 }
-impl Expression {
-    pub fn new (t0: f64, v: Vec<(char, f64)>) -> Self {
-        Self { t0, v }
-    }
-    pub fn eval (&self) -> f64 {
-        let mut res = self.t0;
-        for (op_c, v) in self.v.iter() {
-            match op_c {
-                '+' => res += v,
-                '*' => res *= v,
-                '-' => res -= v,
-                '/' => res /= v,
-                _ => panic!("invalid operator character found in expression")
-            }
-        }
-        res
-    }
+
+#[derive(PartialEq, Debug)]
+pub struct BoolExpression {
+    pub a: Expression,
+    pub b: Expression,
+    pub op: String,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Assignment {
+    pub ident: String, 
+    pub expr: Expression,
+}
+
+pub struct If {
+    pub bexpr: BoolExpression,
+    pub block: Block, 
 }

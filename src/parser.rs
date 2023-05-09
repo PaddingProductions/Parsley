@@ -1,5 +1,9 @@
 pub mod core;
+pub mod block;
 pub mod expr;
+pub mod bool_expr;
+pub mod assign;
+pub mod conditional;
 pub mod operation;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -17,6 +21,9 @@ impl std::fmt::Display for ParseErr {
     }
 }
 impl std::error::Error for ParseErr {}
+pub fn par_err<T> (s: &str) -> ParseRes<T> {
+    Err( ParseErr::new(s) )
+}
 
 pub type ParseRes<'a, T> = Result<(&'a str, T), ParseErr>;
 pub trait Parser<'a, T> {
