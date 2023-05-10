@@ -1,40 +1,132 @@
 use super::*;
 use super::core::*;
-use crate::ast::Expression;
+use crate::ast::{Identifier, Evaluable, Operation};
 use crate::interpreter::Environment;
 
-impl Expression {
-    pub fn new (t0: f64, v: Vec<(String, f64)>) -> Self {
-        Self { t0, v }
+
+struct Expr {
+    t0: Box<dyn Evaluable<f64>>,
+    v: Vec<(String, Box<dyn Evaluable<f64>>)>
+}
+impl Evaluable<f64> for Expr {
+    fn eval (&self, env: &mut Environment) -> f64 {
+        let mut res = self.t0.eval(env);
+        for (op, t) in self.v.iter() {
+            match op.as_str() {
+                "+" => res += t.eval(env),
+                "*" => res *= t.eval(env),
+                "-" => res -= t.eval(env),
+                "/" => res /= t.eval(env),
+                _ => panic!("invalid operator character found in expression")
+            }
+        }
+        res
     }
 }
 
-pub fn expression<'a> () -> impl Parser<'a, Expression> {
-    map (
-        and(
-            parse_number(),
-            zero_or_more(
-                and(
-                    parse_literals(vec!["+", "-", "*", "/"]),
-                    parse_number()
-                )
-            )
+impl Evaluable<f64> for f64 {
+    fn eval (&self, _env: &mut Environment) -> f64 { *self }
+}
+impl Evaluable<f64> for Identifier {
+    fn eval (&self, env: &mut Environment) -> f64 {
+        let var = env.vars.get(self).expect(&format!("'{}' not defined", self));
+        var.clone()
+    }
+}
+
+struct ExprOp { e: Box<dyn Evaluable<f64>> }
+impl Operation for ExprOp {
+    fn exec (&self, env: &mut Environment) {
+        println!("Expression Evaluated to => '{}'", self.e.eval(env))
+    }
+}
+pub fn expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
+    map(
+        prefix(
+            "eval:",
+            expression(),   
         ),
-        |(t0, v)| Expression::new(t0, v.into_iter().map(|(op, v)| (String::from(op), v.clone())).collect())
+        |e| -> Box<dyn Operation> { Box::new(ExprOp { e }) }
     )
 }
 
-pub struct ExprOp {
-    expr: Expression
+pub fn expression<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
+    map(
+        and(
+            precedence1(),
+            zero_or_more(
+                and(
+                    parse_literals(vec!["+", "-"]),
+                    precedence1()
+                )
+            )
+        ),
+        |(t0, v)| -> Box<dyn Evaluable<f64>> { 
+            Box::new( Expr { 
+                t0, 
+                v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
+            }
+        )}
+    )
 }
-impl Operation for ExprOp {
-    fn exec(&self, env: &mut Environment) {
-        println!("expression evaluated to: {}", self.expr.eval());
+
+fn precedence1<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
+    map(
+        and(
+            term(),
+            zero_or_more(
+                and(
+                    parse_literals(vec!["*", "/"]),
+                    term()
+                )
+            )
+        ),
+        |(t0, v)| -> Box<dyn Evaluable<f64>> { 
+            Box::new( Expr { 
+                t0, 
+                v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
+            }
+        )}
+    )
+}
+
+
+fn term<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
+    |buf| { 
+        if let Ok((buf, num)) = parse_number().parse(buf) {
+            Ok((buf, box_evaluable(num)))
+        } else
+        if let Ok((buf, ident)) = parse_identifier().parse(buf) {
+            Ok ((buf, box_evaluable(ident)))
+        } else 
+        {
+            par_err("Did not match 'term' grammar")
+        }
     }
 }
 
-use crate::ast::Operation;
-pub fn expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
-    map(expression(), |expr| -> Box<dyn Operation> { Box::new( ExprOp{ expr }) })
+fn box_evaluable<T, E> (o: E) -> Box<dyn Evaluable<T>>
+where
+    E: Evaluable<T> + 'static
+{
+    let b: Box<dyn Evaluable<T>> = Box::new(o);
+    b
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::Environment;
+
+    #[test] 
+    fn test_expression () {
+        let mut env = Environment::new();
+        let input1 = "1+2";
+        let input2 = "1+2*3";
+        let input3 = "1*2+3*4+4";
+
+        assert!(expression().parse(input1).unwrap().1.eval(&mut env) == 3.0);
+        assert!(expression().parse(input2).unwrap().1.eval(&mut env) == 7.0);
+        assert!(expression().parse(input3).unwrap().1.eval(&mut env) == 18.0);
+    }
+}

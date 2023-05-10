@@ -89,7 +89,10 @@ where
 pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
     move |input: &'a str| match input.get(0..lit.len()) {
         Some(s) if s == lit => Ok((&input[lit.len()..], lit)),
-        _ => par_err("Literal not found")
+        _ => {
+            println!("{input}");
+            par_err("Literal not found")
+        }
     } 
 }
 

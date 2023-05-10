@@ -22,40 +22,22 @@ pub fn block<'a> () -> impl Parser<'a, Block> {
             |v| Block::new( v.into_iter().map(|(op, _)| op).collect() )
         )
     )
+}
 
-    /*
-    |buf: &'a str| {
-        let parse_semi = parse_literal(";"); 
-        let parse_open = parse_literal("{"); 
-        let parse_close = parse_literal("}"); 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::Environment;
 
-        let mut v = vec![];
-        let mut buf = buf;
+    #[test] 
+    fn expr () {
+        let mut env = Environment::new();
+        let input = "{var1=1;var2=1+2;_var3=1*2+3*4+4;}";
 
-        (buf, _) = parse_open.parse(buf)?;
-        loop {
-            match parse_close.parse(buf) {
-                Err(_) => { 
-                    println!("{}", buf);
-                    let _buf = buf;
-                    let (_buf, op) = operation().parse(_buf)?;
-                    let (_buf, _) = parse_semi.parse(_buf)?;
-
-                    v.push(op);
-                    buf = _buf;
-                }, 
-                Ok((_buf, _)) => {
-                    buf = _buf;
-                    break;
-                }
-            }
-        }
-        Ok((buf, Block::new(v)))
+        block().parse(input).unwrap().1.exec(&mut env);
+        
+        assert!(env.vars.get("var1").unwrap()   == &1.0);
+        assert!(env.vars.get("var2").unwrap()   == &3.0);
+        assert!(env.vars.get("_var3").unwrap()  == &18.0);
     }
-    */
 }
-
-pub fn block_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
-    map(block(), |o| -> Box<dyn Operation> { Box::new(o) })
-}
-
