@@ -25,7 +25,7 @@ pub struct Block {
 #[derive(PartialEq, Debug)]
 pub struct Expression {
     pub t0: f64,
-    pub v: Vec<(char, f64)>
+    pub v: Vec<(String, f64)>
 }
 
 #[derive(PartialEq, Debug)]

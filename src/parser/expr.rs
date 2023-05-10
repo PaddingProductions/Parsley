@@ -4,27 +4,24 @@ use crate::ast::Expression;
 use crate::interpreter::Environment;
 
 impl Expression {
-    pub fn new (t0: f64, v: Vec<(char, f64)>) -> Self {
+    pub fn new (t0: f64, v: Vec<(String, f64)>) -> Self {
         Self { t0, v }
     }
 }
 
 pub fn expression<'a> () -> impl Parser<'a, Expression> {
-    move |buf| -> ParseRes<'a, Expression> {
-        let parse_num = parse_number();
-        let parse_op = parse_literal("+");
-
-        let (mut buf, t0) = parse_num.parse(buf)?;
-
-        let mut t = 0.0;
-        let mut v = vec![];
-        while let Ok((mut _buf, op)) = parse_op.parse(buf) {
-            (buf, t) = parse_num.parse(_buf)?;
-            v.push((op.chars().next().unwrap(), t));
-        }
-
-        Ok((buf, Expression::new(t0, v)))
-    }
+    map (
+        and(
+            parse_number(),
+            zero_or_more(
+                and(
+                    parse_literals(vec!["+", "-", "*", "/"]),
+                    parse_number()
+                )
+            )
+        ),
+        |(t0, v)| Expression::new(t0, v.into_iter().map(|(op, v)| (String::from(op), v.clone())).collect())
+    )
 }
 
 pub struct ExprOp {

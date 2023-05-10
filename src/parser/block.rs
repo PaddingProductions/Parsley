@@ -10,6 +10,20 @@ impl Block {
 }
 
 pub fn block<'a> () -> impl Parser<'a, Block> {
+    surround(
+        "{", "}",
+        map (
+            zero_or_more(
+                and( 
+                    operation(),
+                    parse_literal(";")
+                )
+            ),
+            |v| Block::new( v.into_iter().map(|(op, _)| op).collect() )
+        )
+    )
+
+    /*
     |buf: &'a str| {
         let parse_semi = parse_literal(";"); 
         let parse_open = parse_literal("{"); 
@@ -38,6 +52,7 @@ pub fn block<'a> () -> impl Parser<'a, Block> {
         }
         Ok((buf, Block::new(v)))
     }
+    */
 }
 
 pub fn block_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {

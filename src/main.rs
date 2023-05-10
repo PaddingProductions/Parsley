@@ -1,4 +1,4 @@
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Write};
 
 mod ast;
 mod parser;
@@ -10,14 +10,21 @@ use parser::operation::operation;
 
 fn main () {
     let mut stdin = io::stdin().lock();
+    let mut stdout = io::stdout().lock();
+
     let mut env = Environment::new();
 
     loop {
+        print!("syn > ");
+        stdout.flush().unwrap();
+
         let mut buf = String::with_capacity(100);
         stdin.read_line(&mut buf).expect("STDIN failed");
+
         let s: &str = buf.as_str();
-        if let Ok((_, op)) = operation().parse(s) {
-            op.exec(&mut env);
+        match operation().parse(s) {
+            Ok((_, op)) => op.exec(&mut env),
+            Err(e)      => println!("Invalid Syntax: Error: {}", e)
         };
     }
 }
@@ -52,7 +59,7 @@ mod tests {
     fn test_expression_parse () {
         let input = "1+2";
         let expr = expression().parse(input); 
-        assert_eq!(Ok(("", Expression { t0: 1.0, v: vec![('+', 2.0)] })), expr);
+        assert_eq!(Ok(("", Expression { t0: 1.0, v: vec![(String::from("+"), 2.0)] })), expr);
     }
 
     #[test]

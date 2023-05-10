@@ -20,12 +20,12 @@ impl Operation for Block {
 impl Expression {
     pub fn eval (&self) -> f64 {
         let mut res = self.t0;
-        for (op_c, v) in self.v.iter() {
-            match op_c {
-                '+' => res += v,
-                '*' => res *= v,
-                '-' => res -= v,
-                '/' => res /= v,
+        for (op, v) in self.v.iter() {
+            match op.as_str() {
+                "+" => res += v,
+                "*" => res *= v,
+                "-" => res -= v,
+                "/" => res /= v,
                 _ => panic!("invalid operator character found in expression")
             }
         }
