@@ -42,7 +42,9 @@ impl Operation for ExprOp {
 }
 pub fn expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
     map(
-        prefix( "eval:", expression(),   
+        prefix(
+            "eval:",
+            expression(),   
         ),
         |e| -> Box<dyn Operation> { Box::new(ExprOp { e }) }
     )

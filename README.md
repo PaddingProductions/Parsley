@@ -5,7 +5,6 @@ Written as a hobby project after being inspired by blogs discussing interpreters
 This implementation employed extensive use of Rust's algebraic type system, different from typical OOP / polymorphic design patterns.
 This project allowed me to become fluent in navigating around Rust's safe type system, and the language itself in general.
 
----
 ## Usage
 Thanks to Cargo's ease of use, simply clone the repository and run `cargo run`.
 You should see the following:
@@ -29,11 +28,9 @@ Expression Evaluated to => '20'
 ```
 Refer to the `Syntax` section for a ~~complete~~ documentation on Parsley grammar.
 
----
 ## Grammar
 __Will fill out soon__ 
 
----
 
 ## Resources
 - [Learning Parser Combinators With Rust - Bodil Stokke](https://bodil.lol/parser-combinators/)
