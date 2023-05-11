@@ -4,6 +4,14 @@ use super::expr::expression;
 use crate::interpreter::Environment;
 use crate::ast::{Assignment, Operation};
 
+impl Operation for Assignment {
+    fn exec (&self, env: &mut Environment) {
+        let val = self.expr.eval(env);
+        println!("setting '{}' to {}", self.ident, val);
+        env.vars.insert(self.ident.clone(), val);
+    }
+}
+
 pub fn assignment<'a> () -> impl Parser<'a, Assignment> {
     let funct = |(ident, ( _, expr))| Assignment { ident, expr };
     map( 

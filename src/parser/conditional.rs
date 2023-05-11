@@ -1,29 +1,46 @@
 use super::*;
 use super::core::*;
-use super::bool_expr::b_expression;
+use super::bool_expr::bool_expression;
 use super::block::block;
-use crate::ast::{If, Block, BoolExpression};
+use crate::ast::{If, Operation};
+use crate::interpreter::Environment;
 
-impl If {
-    pub fn new (bexpr: BoolExpression, block: Block) -> Self {
-        Self { bexpr, block }
+
+impl Operation for If {
+    fn exec (&self, env: &mut Environment) {
+        if self.expr.eval(env) {
+            self.block.exec(env);
+        }
     }
 }
-
 pub fn conditional_if<'a> () -> impl Parser<'a, If> {
-    move |buf| -> ParseRes<'a, If> {
-        let parse_if = parse_literal("if:");
+    BoxedParser::new(parse_literal("if:"))
+        .and(bool_expression())
+        .and(block())
+        .map(
+            |((_, expr), block)| If { expr, block }
+        )
+}
 
-        let (buf, _) = parse_if.parse(buf)?;
-        let (buf, expr) = b_expression().parse(buf)?;
-        let (buf, block) = block().parse(buf)?;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::Environment;
 
-        Ok((buf, If::new(expr, block)))
+    #[test] 
+    fn test_conditional () {
+        let mut env = Environment::new();
+        let input1 = "{res1=0;res2=0;}";
+        let input2 = "if:1+2!=3{res1=1;}";
+        let input3 = "if:1*3==4*2-5{res2=2;}";
+        let input4 = "if:true!=false{res2=3;}";
+
+
+        block().parse(input1).unwrap().1.exec(&mut env);
+        conditional_if().parse(input2).unwrap().1.exec(&mut env);
+        conditional_if().parse(input3).unwrap().1.exec(&mut env);
+        conditional_if().parse(input4).unwrap().1.exec(&mut env);
+        assert!(*env.vars.get("res1").unwrap() == 0.0);
+        assert!(*env.vars.get("res2").unwrap() == 3.0);
     }
 }
-
-use crate::ast::Operation;
-pub fn conditional_if_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
-    map(conditional_if(), |_if| -> Box<dyn Operation> {Box::new(_if)} )
-}
-

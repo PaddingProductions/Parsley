@@ -42,70 +42,55 @@ impl Operation for ExprOp {
 }
 pub fn expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
     map(
-        prefix(
-            "eval:",
-            expression(),   
+        prefix( "eval:", expression(),   
         ),
         |e| -> Box<dyn Operation> { Box::new(ExprOp { e }) }
     )
 }
 
-pub fn expression<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
-    map(
-        and(
-            precedence1(),
-            zero_or_more(
-                and(
-                    parse_literals(vec!["+", "-"]),
-                    precedence1()
-                )
-            )
-        ),
-        |(t0, v)| -> Box<dyn Evaluable<f64>> { 
-            Box::new( Expr { 
-                t0, 
-                v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
+pub fn expression<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {
+    precedence1()
+        .and(
+            BoxedParser::new(parse_literals(vec!["+", "-"]))
+                .and(precedence1())
+                .zero_or_more()
+        )
+        .map(
+            |(t0, v)| -> Box<dyn Evaluable<f64>> { 
+                Box::new( Expr { 
+                    t0, 
+                    v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
+                })
             }
-        )}
-    )
+        )
 }
 
-fn precedence1<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
-    map(
-        and(
-            term(),
-            zero_or_more(
-                and(
-                    parse_literals(vec!["*", "/"]),
-                    term()
-                )
-            )
-        ),
-        |(t0, v)| -> Box<dyn Evaluable<f64>> { 
-            Box::new( Expr { 
-                t0, 
-                v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
-            }
-        )}
-    )
+fn precedence1<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {
+    term()
+        .and( 
+            BoxedParser::new(parse_literals(vec!["*", "/"]))
+                .and(term())
+                .zero_or_more()
+        )
+        .map(
+            |(t0, v)| -> Box<dyn Evaluable<f64>> { 
+                Box::new( Expr { 
+                    t0, 
+                    v: v.into_iter().map(|(op, v)| (String::from(op), v)).collect() 
+                }
+            )}
+        )
 }
 
 
-fn term<'a> () -> impl Parser<'a, Box<dyn Evaluable<f64>>> {
-    |buf| { 
-        if let Ok((buf, num)) = parse_number().parse(buf) {
-            Ok((buf, box_evaluable(num)))
-        } else
-        if let Ok((buf, ident)) = parse_identifier().parse(buf) {
-            Ok ((buf, box_evaluable(ident)))
-        } else 
-        {
-            par_err("Did not match 'term' grammar")
-        }
-    }
+fn term<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {
+    BoxedParser::new(or( 
+        map(parse_number(), |num| box_evaluable(num)),
+        map(parse_identifier(), |ident| box_evaluable(ident))
+    ))
 }
 
-fn box_evaluable<T, E> (o: E) -> Box<dyn Evaluable<T>>
+pub fn box_evaluable<T, E> (o: E) -> Box<dyn Evaluable<T>>
 where
     E: Evaluable<T> + 'static
 {

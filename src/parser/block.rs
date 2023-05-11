@@ -2,13 +2,20 @@ use super::*;
 use super::core::*;
 use crate::ast::{Operation, Block};
 use super::operation::operation;
+use crate::interpreter::Environment;
 
 impl Block {
     pub fn new (ops: Vec<Box<dyn Operation>>) -> Self {
         Self { ops } 
     }
 }
-
+impl Operation for Block {
+    fn exec (&self, env: &mut Environment) {
+        for op in self.ops.iter() {
+            op.exec(env);
+        }
+    }
+}
 pub fn block<'a> () -> impl Parser<'a, Block> {
     surround(
         "{", "}",
@@ -30,7 +37,7 @@ mod tests {
     use crate::interpreter::Environment;
 
     #[test] 
-    fn expr () {
+    fn test_block () {
         let mut env = Environment::new();
         let input = "{var1=1;var2=1+2;_var3=1*2+3*4+4;}";
 

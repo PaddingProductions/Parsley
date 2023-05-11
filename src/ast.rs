@@ -23,6 +23,6 @@ pub trait Evaluable<T> {
 
 
 pub struct If {
-    pub bexpr: Box<dyn Evaluable<bool>>,
+    pub expr: Box<dyn Evaluable<bool>>,
     pub block: Block, 
 }

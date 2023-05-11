@@ -3,12 +3,17 @@ use std::boxed::Box;
 use super::*;
 use super::assign::assignment;
 use super::block::block;
+use super::conditional::conditional_if;
 use super::expr::expression_op;
+use super::bool_expr::bool_expression_op;
 use crate::ast::*;
 //use crate::parser::conditional::conditional_if;
 
 pub fn operation<'a> () -> impl Parser<'a, Box<dyn Operation>> {
     move |buf: &'a str| {
+        if let Ok((buf, out)) = bool_expression_op().parse(buf) {
+            Ok((buf, out))
+        } else 
         if let Ok((buf, out)) = expression_op().parse(buf) {
             Ok((buf, out))
         } else 
@@ -18,11 +23,9 @@ pub fn operation<'a> () -> impl Parser<'a, Box<dyn Operation>> {
         if let Ok((buf, out)) = block().parse(buf) {
             Ok((buf, box_operation(out)))
         } else 
-        /*
-        if let Ok((buf, out)) = conditional_if_op().parse(buf) {
-            Ok((buf, out))
-        } else
-        */
+        if let Ok((buf, out)) = conditional_if().parse(buf) {
+            Ok((buf, box_operation(out)))
+        } else 
         {
             par_err("no valid operation found.")
         }

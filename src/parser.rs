@@ -1,10 +1,14 @@
 pub mod core;
 pub mod block;
 pub mod expr;
-//pub mod bool_expr;
+pub mod bool_expr;
 pub mod assign;
-//pub mod conditional;
+pub mod conditional;
 pub mod operation;
+
+use std::boxed::Box;
+
+use self::core::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseErr {
@@ -35,5 +39,59 @@ where
 {
     fn parse (&self, input: &'a str) -> ParseRes<'a, T> {
         self(input)
+    }
+}
+
+pub struct BoxedParser<'a, T> {
+    parser: Box<dyn Parser<'a, T> + 'a>
+}
+impl<'a, T> BoxedParser<'a, T> 
+where
+    T: 'a
+{
+    pub fn new<P> (p: P) -> Self
+    where
+        P: Parser<'a, T> + 'a
+    {
+        Self{ parser: Box::new(p) }
+    }
+
+    pub fn option (self) -> BoxedParser<'a, Option<T>> {
+        BoxedParser::new(option(self))
+    }
+
+    pub fn map<O, F> (self, f: F) -> BoxedParser<'a, O> 
+    where
+        O: 'a,
+        F: 'a + Fn(T) -> O
+    {
+        BoxedParser::new( map(self, f) ) 
+    }
+
+    pub fn and<B, P> (self, p: P) -> BoxedParser<'a, (T, B)> 
+    where
+        B: 'a,
+        P: 'a + Parser<'a, B>
+    {
+        BoxedParser::new( and(self, p) ) 
+    }
+    pub fn or<P> (self, p: P) -> BoxedParser<'a, T> 
+    where
+        P: 'a + Parser<'a, T>
+    {
+        BoxedParser::new( or(self, p) ) 
+    }
+
+    pub fn one_or_more (self) -> BoxedParser<'a, Vec<T>> {
+        BoxedParser::new( one_or_more(self) )
+    }
+
+    pub fn zero_or_more (self) -> BoxedParser<'a, Vec<T>> {
+        BoxedParser::new( zero_or_more(self) )
+    }
+}
+impl<'a, T> Parser<'a, T> for BoxedParser<'a, T> {
+    fn parse (&self, buf: &'a str) -> ParseRes<'a, T> {
+        self.parser.parse(buf)
     }
 }

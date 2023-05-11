@@ -14,6 +14,7 @@ fn main () {
 
     let mut env = Environment::new();
 
+    println!("\x1b[1m   ===  [Parsley]  ===\x1b[0m");
     loop {
         print!("syn > ");
         stdout.flush().unwrap();
