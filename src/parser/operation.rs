@@ -3,10 +3,9 @@ use std::boxed::Box;
 use super::*;
 use super::assign::assignment;
 use super::block::block;
-//use super::conditional::conditional_if;
+use super::conditional::conditional_if;
 use super::print::print;
 use crate::ast::*;
-//use crate::parser::conditional::conditional_if;
 
 pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
    BoxedParser::new( |buf: &'a str| {
@@ -19,10 +18,9 @@ pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
         if let Ok((buf, out)) = block().parse(buf) {
             Ok((buf, box_operation(out)))
         } else 
-/*        if let Ok((buf, out)) = conditional_if().parse(buf) {
+        if let Ok((buf, out)) = conditional_if().parse(buf) {
             Ok((buf, box_operation(out)))
-        } else 
-*/        {
+        } else {
             par_err("no valid operation found.")
         }
     })

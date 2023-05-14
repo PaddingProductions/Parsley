@@ -119,9 +119,13 @@ fn base<'a> () -> impl Parser<'a, Box<dyn Evaluable>> {
             return Ok((buf, Box::new(Ident(o))));
         }
 
-        // If Literal 
+        // If Num Literal 
         if let Ok((buf, n)) = parse_number().parse(buf) {
             return Ok((buf, Box::new(Num(n))));
+        }   
+
+        if let Ok((buf, s)) = parse_literals(vec!["true", "false"]).parse(buf) {
+            return Ok((buf, Box::new(Bool(s == "true"))));
         }   
 
         par_err("no base found")
@@ -142,7 +146,6 @@ mod tests {
         let input2 = "1+2*3";
         let input3 = "1*2+3*4+4";
 
-        println!("{:?}", expression().parse(input1).unwrap().1.eval(&mut env).unwrap());
         assert!(expression().parse(input1).unwrap().1.eval(&mut env).unwrap() == Types::Num(3.0));
         assert!(expression().parse(input2).unwrap().1.eval(&mut env).unwrap() == Types::Num(7.0));
         assert!(expression().parse(input3).unwrap().1.eval(&mut env).unwrap() == Types::Num(18.0));

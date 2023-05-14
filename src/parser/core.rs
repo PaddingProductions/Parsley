@@ -112,7 +112,6 @@ where
 }
 
 pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
-    if lit == "(" { println!("hi"); }
     move |input: &'a str| match input.get(0..lit.len()) {
         Some(s) if s == lit => Ok((&input[lit.len()..], lit)),
         _ => par_err("Literal not found")
@@ -139,7 +138,6 @@ where
     move |input: &'a str| {
         let mut tok = String::new();
         let mut iter = input.chars();
-        println!("{input}");
 
         match iter.next() {
             Some(c) if rule(c) => tok.push(c),
