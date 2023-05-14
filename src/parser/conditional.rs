@@ -13,8 +13,8 @@ impl Operation for If {
         }
     }
 }
-pub fn conditional_if<'a> () -> impl Parser<'a, If> {
-    BoxedParser::new(parse_literal("if:"))
+pub fn conditional_if<'a> () -> BoxedParser<'a, If> {
+    BoxedParser::new(parse_literal("if "))
         .and(bool_expression())
         .and(block())
         .map(

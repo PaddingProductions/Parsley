@@ -1,7 +1,7 @@
 use super::*;
 use super::core::*;
 use super::expr::expression;
-use crate::ast::{Operation, Identifier, Evaluable};
+use crate::ast::{Identifier, Evaluable};
 use crate::interpreter::Environment;
 use super::expr::box_evaluable;
 
@@ -53,23 +53,6 @@ impl Evaluable<bool> for Identifier {
         *var != 0.0
     }
 }
-
-struct BoolExprOp { e: Box<dyn Evaluable<bool>> }
-impl Operation for BoolExprOp {
-    fn exec (&self, env: &mut Environment) {
-        println!("Boolean Expression Evaluated to => '{}'", if self.e.eval(env) { "true" } else { "false" });
-    }
-}
-pub fn bool_expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
-    map(
-        prefix(
-            "bool-eval:",
-            bool_expression(),   
-        ),
-        |e| -> Box<dyn Operation> { Box::new( BoolExprOp { e }) }
-    )
-}
-
 
 pub fn bool_expression<'a> () -> BoxedParser<'a, Box<dyn Evaluable<bool>>> {
     expression()

@@ -1,6 +1,6 @@
 use super::*;
 use super::core::*;
-use crate::ast::{Identifier, Evaluable, Operation};
+use crate::ast::{Identifier, Evaluable};
 use crate::interpreter::Environment;
 
 
@@ -32,22 +32,6 @@ impl Evaluable<f64> for Identifier {
         let var = env.vars.get(self).expect(&format!("'{}' not defined", self));
         var.clone()
     }
-}
-
-struct ExprOp { e: Box<dyn Evaluable<f64>> }
-impl Operation for ExprOp {
-    fn exec (&self, env: &mut Environment) {
-        println!("Expression Evaluated to => '{}'", self.e.eval(env))
-    }
-}
-pub fn expression_op<'a> () -> impl Parser<'a, Box<dyn Operation>> {
-    map(
-        prefix(
-            "eval:",
-            expression(),   
-        ),
-        |e| -> Box<dyn Operation> { Box::new(ExprOp { e }) }
-    )
 }
 
 pub fn expression<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {

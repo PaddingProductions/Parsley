@@ -5,6 +5,7 @@ pub mod bool_expr;
 pub mod assign;
 pub mod conditional;
 pub mod operation;
+pub mod print;
 
 use std::boxed::Box;
 

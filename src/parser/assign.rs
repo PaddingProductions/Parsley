@@ -12,16 +12,13 @@ impl Operation for Assignment {
     }
 }
 
-pub fn assignment<'a> () -> impl Parser<'a, Assignment> {
-    let funct = |(ident, ( _, expr))| Assignment { ident, expr };
-    map( 
-        and( parse_identifier(), 
-        and( parse_literal("="), 
-            expression()
+pub fn assignment<'a> () -> BoxedParser<'a, Assignment> {
+    BoxedParser::new(parse_identifier()) 
+        .and(parse_literal("="))
+        .and(expression())
+        .map( 
+            |((ident,  _), expr)| Assignment { ident, expr }
         )
-        ),
-        funct
-    )
 }
 
 #[cfg(test)]

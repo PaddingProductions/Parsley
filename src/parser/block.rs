@@ -16,19 +16,18 @@ impl Operation for Block {
         }
     }
 }
-pub fn block<'a> () -> impl Parser<'a, Block> {
-    surround(
-        "{", "}",
-        map (
-            zero_or_more(
-                and( 
-                    operation(),
-                    parse_literal(";")
-                )
-            ),
-            |v| Block::new( v.into_iter().map(|(op, _)| op).collect() )
-        )
-    )
+pub fn block<'a> () -> BoxedParser<'a, Block> {
+    BoxedParser::new( surround( "{", "}",
+        operation()
+            .and( parse_literals(vec![";", "\n"]) )
+            .zero_or_more()
+            .map(
+                |v| {
+                    println!("hi mom");
+                    Block::new( v.into_iter().map(|(op, _)| op).collect() )
+                }
+            )
+    ))
 }
 
 #[cfg(test)]
