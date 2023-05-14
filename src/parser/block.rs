@@ -1,6 +1,6 @@
 use super::*;
 use super::core::*;
-use crate::ast::{Operation, Block};
+use crate::ast::*;
 use super::operation::operation;
 use crate::interpreter::Environment;
 
@@ -10,10 +10,11 @@ impl Block {
     }
 }
 impl Operation for Block {
-    fn exec (&self, env: &mut Environment) {
+    fn exec (&self, env: &mut Environment) -> Result<(), ()> {
         for op in self.ops.iter() {
-            op.exec(env);
+            op.exec(env)?;
         }
+        Ok(())
     }
 }
 pub fn block<'a> () -> BoxedParser<'a, Block> {
@@ -22,10 +23,7 @@ pub fn block<'a> () -> BoxedParser<'a, Block> {
             .and( parse_literals(vec![";", "\n"]) )
             .zero_or_more()
             .map(
-                |v| {
-                    println!("hi mom");
-                    Block::new( v.into_iter().map(|(op, _)| op).collect() )
-                }
+                |v| Block::new( v.into_iter().map(|(op, _)| op).collect() )
             )
     ))
 }
@@ -40,10 +38,10 @@ mod tests {
         let mut env = Environment::new();
         let input = "{var1=1;var2=1+2;_var3=1*2+3*4+4;}";
 
-        block().parse(input).unwrap().1.exec(&mut env);
+        block().parse(input).unwrap().1.exec(&mut env).unwrap();
         
-        assert!(env.vars.get("var1").unwrap()   == &1.0);
-        assert!(env.vars.get("var2").unwrap()   == &3.0);
-        assert!(env.vars.get("_var3").unwrap()  == &18.0);
+        assert!(*env.vars.get("var1").unwrap()   == Types::Num(1.0));
+        assert!(*env.vars.get("var2").unwrap()   == Types::Num(3.0));
+        assert!(*env.vars.get("_var3").unwrap()  == Types::Num(18.0));
     }
 }

@@ -2,13 +2,14 @@ use super::*;
 use super::core::*;
 use super::expr::expression;
 use crate::interpreter::Environment;
-use crate::ast::{Assignment, Operation};
+use crate::ast::*;
 
 impl Operation for Assignment {
-    fn exec (&self, env: &mut Environment) {
-        let val = self.expr.eval(env);
-        println!("setting '{}' to {}", self.ident, val);
+    fn exec (&self, env: &mut Environment) -> Result<(),()> {
+        let val = self.expr.eval(env)?;
+        println!("setting '{}' to {:?}", self.ident, val);
         env.vars.insert(self.ident.clone(), val);
+        Ok(())
     }
 }
 
@@ -37,8 +38,8 @@ mod tests {
         assignment().parse(input2).unwrap().1.exec(&mut env);
         assignment().parse(input3).unwrap().1.exec(&mut env);
         
-        assert!(env.vars.get("var1").unwrap()   == &1.0);
-        assert!(env.vars.get("var2").unwrap()   == &3.0);
-        assert!(env.vars.get("_var3").unwrap()  == &18.0);
+        assert!(*env.vars.get("var1").unwrap()   == Types::Num(1.0));
+        assert!(*env.vars.get("var2").unwrap()   == Types::Num(3.0));
+        assert!(*env.vars.get("_var3").unwrap()  == Types::Num(18.0));
     }
 }

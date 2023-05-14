@@ -139,6 +139,7 @@ where
     move |input: &'a str| {
         let mut tok = String::new();
         let mut iter = input.chars();
+        println!("{input}");
 
         match iter.next() {
             Some(c) if rule(c) => tok.push(c),

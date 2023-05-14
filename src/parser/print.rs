@@ -4,19 +4,14 @@ use crate::{ast::{Operation, Evaluable}, interpreter::Environment};
 
 use super::expr::expression;
 
-struct Print<T> 
-where
-    T: std::fmt::Display
-{
-    e: Box<dyn Evaluable<T>>
+struct Print {
+    e: Box<dyn Evaluable>
 }
 
-impl<T> Operation for Print<T> 
-where 
-    T: std::fmt::Display
-{
-    fn exec (&self, env: &mut Environment) {
-        println!("{}", self.e.eval(env));
+impl Operation for Print {
+    fn exec (&self, env: &mut Environment) -> Result<(), ()> {
+        println!("{:?}", self.e.eval(env));
+        Ok(())
     }
 }
 
