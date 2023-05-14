@@ -38,7 +38,18 @@ where
     F: Fn (&'a str) -> ParseRes<T>
 {
     fn parse (&self, input: &'a str) -> ParseRes<'a, T> {
-        self(input)
+        let start = {
+            let mut iter = input.chars();
+            let mut counter = 0;
+            while let Some(c) = iter.next() {
+                if c != ' ' && c != '\n' && c != '\r' {
+                    break;
+                }
+                counter += 1;
+            }
+            counter
+        };
+        self(&input[start..])
     }
 }
 
