@@ -40,8 +40,7 @@ fn main () {
                     op.exec(&mut env)    
                 },
                 Err(e) => {
-                    println!("{s}");
-                    println!("Invalid Syntax: Error: {}", e);
+                    println!("Invalid Syntax While Parsing: '{}'\nError: {}", s, e);
                     break;
                 }
             };

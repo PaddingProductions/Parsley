@@ -6,6 +6,7 @@ pub mod assign;
 pub mod conditional;
 pub mod operation;
 pub mod print;
+pub mod func;
 
 use std::boxed::Box;
 

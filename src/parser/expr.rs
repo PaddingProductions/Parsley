@@ -70,10 +70,8 @@ fn precedence1<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {
 
 
 fn term<'a> () -> BoxedParser<'a, Box<dyn Evaluable<f64>>> {
-    BoxedParser::new(or( 
-        map(parse_number(), |num| box_evaluable(num)),
-        map(parse_identifier(), |ident| box_evaluable(ident))
-    ))
+    BoxedParser::new(map(parse_number(), |num| box_evaluable(num)))
+        .or(map(parse_identifier(), |ident| box_evaluable(ident)))
 }
 
 pub fn box_evaluable<T, E> (o: E) -> Box<dyn Evaluable<T>>

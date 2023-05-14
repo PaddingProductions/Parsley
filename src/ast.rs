@@ -20,9 +20,19 @@ pub trait Evaluable<T> {
     fn eval (&self, env: &mut Environment) -> T;
 }
 
+impl<T> Operation for dyn Evaluable<T> 
+where 
+    T: std::fmt::Debug
+{
+    fn exec (&self, env: &mut Environment) {
+        println!("expression evaluated to: {:?}", self.eval(env));
+    }
+}
 
 
 pub struct If {
     pub expr: Box<dyn Evaluable<bool>>,
     pub block: Block, 
 }
+
+

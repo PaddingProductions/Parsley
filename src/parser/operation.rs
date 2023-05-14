@@ -9,23 +9,10 @@ use crate::ast::*;
 //use crate::parser::conditional::conditional_if;
 
 pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
-    BoxedParser::new( |buf: &'a str| {
-        if let Ok((buf, out)) = print().parse(buf) {
-            Ok((buf, out))
-        } else 
-        if let Ok((buf, out)) = assignment().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else
-        if let Ok((buf, out)) = block().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else 
-        if let Ok((buf, out)) = conditional_if().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else 
-        {
-            par_err("no valid operation found.")
-        }
-    })
+    print()
+        .or(assignment().map(box_operation))
+        .or(block().map(box_operation))
+        .or(conditional_if().map(box_operation))
 }
 
 fn box_operation<T> (o: T) -> Box<dyn Operation>
