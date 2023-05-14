@@ -5,7 +5,10 @@ use crate::interpreter::Environment;
 
 use Types::*;
 
-const operators: [&str; 2] = [
+const operators: [&str; 5] = [
+    "== !=",
+    "||",
+    "&&",
     "+ -",
     "* /",
 ];
@@ -34,6 +37,8 @@ impl Evaluable for Expr {
                         _ => panic!("Cannot resolve term to type Num()")
                     };
                     match op.as_str() {
+                        "==" => return Ok(Bool(res == v)),
+                        "!=" => return Ok(Bool(res != v)),
                         "+" => res += v,
                         "-" => res -= v,
                         "*" => res *= v,
@@ -43,6 +48,26 @@ impl Evaluable for Expr {
                 }
                 Ok(Num(res))
             },
+            Bool(mut res) => {
+                for (op, t) in self.v.iter() {
+                    let b = match t.eval(env)? {
+                        Bool(b) => b,
+                        Ident(s) => {
+                            let v = env.vars.get(&s).expect(&format!("Attempted to resolve undefined variable {}", s)).clone();
+                            if let Bool(b) = v { b } else { return Err(()); }// Cannot resolve variable to num 
+                        },
+                        _ => panic!("Cannot resolve term to type Bool()")
+                    };
+                    match op.as_str() {
+                        "==" => return Ok(Bool(res == b)),
+                        "!=" => return Ok(Bool(res != b)),
+                        "&&" => res &= b,
+                        "||" => res |= b,
+                        _ => return Err(()) //"Not a valid Bool() operator"
+                    }
+                }
+                Ok(Bool(res))
+            }
             Ident(_) => panic!("t0 still an Ident(). This should never happen."),
             _ => panic!("not implemented yet!")
         }
@@ -121,5 +146,19 @@ mod tests {
         assert!(expression().parse(input1).unwrap().1.eval(&mut env).unwrap() == Types::Num(3.0));
         assert!(expression().parse(input2).unwrap().1.eval(&mut env).unwrap() == Types::Num(7.0));
         assert!(expression().parse(input3).unwrap().1.eval(&mut env).unwrap() == Types::Num(18.0));
+    }
+
+    #[test] 
+    fn test_bool_expression () {
+        let mut env = Environment::new();
+        let input1 = "1==2";
+        let input2 = "2==2";
+        let input3 = "2!=2";
+        let input4 = "1*2+3==4+4-3";
+
+        assert!(expression().parse(input1).unwrap().1.eval(&mut env).unwrap()== Types::Bool(false));
+        assert!(expression().parse(input2).unwrap().1.eval(&mut env).unwrap()== Types::Bool(true));
+        assert!(expression().parse(input3).unwrap().1.eval(&mut env).unwrap()== Types::Bool(false));
+        assert!(expression().parse(input4).unwrap().1.eval(&mut env).unwrap()== Types::Bool(true));
     }
 }
