@@ -1,8 +1,8 @@
-use crate::interpreter::Environment;
+use crate::interpreter::{Environment, InterpreterErr};
 use std::boxed::Box;
 
 pub trait Operation {
-    fn exec (&self, env: &mut Environment) -> Result<(),()>;
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr>;
 }
 
 pub struct Block {
@@ -14,8 +14,6 @@ pub struct Assignment {
     pub expr: Box<dyn Evaluable>
 }
 
-pub type Identifier = String;
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum Types {
     Num (f64),
@@ -24,14 +22,14 @@ pub enum Types {
 }
 
 pub trait Evaluable {
-    fn eval (&self, env: &mut Environment) -> Result<Types, ()>;
+    fn eval (&self, env: &mut Environment) -> Result<Types, InterpreterErr>;
 }
 impl Evaluable for Types {
-    fn eval (&self, _env: &mut Environment) -> Result<Types, ()> { Ok(self.clone()) } 
+    fn eval (&self, _env: &mut Environment) -> Result<Types, InterpreterErr> { Ok(self.clone()) } 
 }
 impl Operation for dyn Evaluable {
-    fn exec (&self, env: &mut Environment) -> Result<(), ()> {
-        println!("expression evaluated to: {:?}", self.eval(env));
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
+        println!("expression evaluated to: {:?}", self.eval(env)?);
         Ok(())
     }
 }

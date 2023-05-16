@@ -1,11 +1,11 @@
 use super::*;
 use super::core::*;
 use super::expr::expression;
-use crate::interpreter::Environment;
+use crate::interpreter::{Environment, InterpreterErr};
 use crate::ast::*;
 
 impl Operation for Assignment {
-    fn exec (&self, env: &mut Environment) -> Result<(),()> {
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         let val = self.expr.eval(env)?;
         println!("setting '{}' to {:?}", self.ident, val);
         env.vars.insert(self.ident.clone(), val);

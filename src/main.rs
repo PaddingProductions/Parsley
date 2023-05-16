@@ -37,7 +37,9 @@ fn main () {
             match operation().parse(s) {
                 Ok((buf, op)) => {
                     s = buf;
-                    op.exec(&mut env)    
+                    if let Err(err) = op.exec(&mut env) {
+                        println!("Interpreter failed with error: {:?}", err);
+                    }
                 },
                 Err(e) => {
                     println!("Invalid Syntax While Parsing: '{}'\nError: {}", s, e);

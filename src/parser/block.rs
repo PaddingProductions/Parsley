@@ -2,7 +2,7 @@ use super::*;
 use super::core::*;
 use crate::ast::*;
 use super::operation::operation;
-use crate::interpreter::Environment;
+use crate::interpreter::{Environment, InterpreterErr};
 
 impl Block {
     pub fn new (ops: Vec<Box<dyn Operation>>) -> Self {
@@ -10,7 +10,7 @@ impl Block {
     }
 }
 impl Operation for Block {
-    fn exec (&self, env: &mut Environment) -> Result<(), ()> {
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         for op in self.ops.iter() {
             op.exec(env)?;
         }

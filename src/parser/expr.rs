@@ -1,11 +1,11 @@
 use super::*;
 use super::core::*;
 use crate::ast::*;
-use crate::interpreter::Environment;
+use crate::interpreter::*;
 
 use Types::*;
 
-const operators: [&str; 5] = [
+const OPERATORS: [&str; 5] = [
     "== !=",
     "||",
     "&&",
@@ -18,24 +18,43 @@ struct Expr {
     v: Vec<(String, Box<dyn Evaluable>)>
 }
 
+fn resolve_into_num (env: &mut Environment, v: Types) -> Result<f64, InterpreterErr>{
+    match v {
+        Num(v) => Ok(v),
+        Ident(s) => {
+            let v = env.vars.get(&s).ok_or(inter_err(format!("Variable {} undefined", s).as_str()))?;
+            if let Num(x) = v { Ok(*x) } else { return Err(inter_err("Variable not a number")) } 
+        },
+        _ => Err(inter_err("Cannot resolve term to type Num()"))
+    }
+}
+fn resolve_into_bool (env: &mut Environment, v: Types) -> Result<bool, InterpreterErr>{
+    match v {
+        Bool(b) => Ok(b),
+        Ident(s) => {
+            let v = env.vars.get(&s).ok_or(inter_err(format!("Variable {} undefined", s).as_str()))?;
+            if let Bool(b) = v { Ok(*b) } else { return Err(inter_err("Variable not a boolean")) }
+        },
+        _ => Err(inter_err("Cannot resolve term to type Bool()"))
+    }
+}
+
 impl Evaluable for Expr {
-    fn eval (&self, env: &mut Environment) -> Result<Types, ()> {
+    fn eval (&self, env: &mut Environment) -> Result<Types, InterpreterErr> {
         let t0 = self.t0.eval(env)?;
+
+        // Resolve Identifier
         let t0 = if let Ident(s) = t0 { 
             env.vars.get(&s).expect(&format!("Attempted to resolve undefined variable {}", s)).clone()
         } else { t0 };
 
+        // Switch between type expressed.
         match t0 {
             Num(mut res) => {
                 for (op, t) in self.v.iter() {
-                    let v = match t.eval(env)? {
-                        Num(v) => v,
-                        Ident(s) => {
-                            let v = env.vars.get(&s).expect(&format!("Attempted to resolve undefined variable {}", s)).clone();
-                            if let Num(v) = v { v } else { return Err(()); }// Cannot resolve variable to num 
-                        },
-                        _ => panic!("Cannot resolve term to type Num()")
-                    };
+                    let v = t.eval(env)?;
+                    let v = resolve_into_num(env, v)?;
+
                     match op.as_str() {
                         "==" => return Ok(Bool(res == v)),
                         "!=" => return Ok(Bool(res != v)),
@@ -43,27 +62,22 @@ impl Evaluable for Expr {
                         "-" => res -= v,
                         "*" => res *= v,
                         "/" => res /= v,
-                        _ => return Err(()) //"Not a valid Num() operator"
+                        _ => return Err(inter_err("Not a Num() operator")) //"Not a valid Num() operator"
                     }
                 }
                 Ok(Num(res))
             },
             Bool(mut res) => {
                 for (op, t) in self.v.iter() {
-                    let b = match t.eval(env)? {
-                        Bool(b) => b,
-                        Ident(s) => {
-                            let v = env.vars.get(&s).expect(&format!("Attempted to resolve undefined variable {}", s)).clone();
-                            if let Bool(b) = v { b } else { return Err(()); }// Cannot resolve variable to num 
-                        },
-                        _ => panic!("Cannot resolve term to type Bool()")
-                    };
+                    let b = t.eval(env)?;
+                    let b = resolve_into_bool(env, b)?;
+
                     match op.as_str() {
                         "==" => return Ok(Bool(res == b)),
                         "!=" => return Ok(Bool(res != b)),
                         "&&" => res &= b,
                         "||" => res |= b,
-                        _ => return Err(()) //"Not a valid Bool() operator"
+                        _ => return Err(inter_err("Not a Bool() operator")) //"Not a valid Bool() operator"
                     }
                 }
                 Ok(Bool(res))
@@ -80,12 +94,12 @@ pub fn expression<'a> () -> BoxedParser<'a, Box<dyn Evaluable>> {
 }
 
 fn term<'a> (p: usize) -> BoxedParser<'a, Box<dyn Evaluable>> {
-    if p == operators.len() {
+    if p == OPERATORS.len() {
         return BoxedParser::new(base());
     }
     term(p+1)
         .and( 
-            BoxedParser::new(parse_literals(operators[p].split(' ').collect()))
+            BoxedParser::new(parse_literals(OPERATORS[p].split(' ').collect()))
                 .and(term(p+1))
                 .zero_or_more()
         )

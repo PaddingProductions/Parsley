@@ -1,6 +1,6 @@
 use super::*;
 use super::core::*;
-use crate::{ast::{Operation, Evaluable}, interpreter::Environment};
+use crate::{ast::{Operation, Evaluable}, interpreter::{Environment, InterpreterErr}};
 
 use super::expr::expression;
 
@@ -9,7 +9,7 @@ struct Print {
 }
 
 impl Operation for Print {
-    fn exec (&self, env: &mut Environment) -> Result<(), ()> {
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         println!("{:?}", self.e.eval(env));
         Ok(())
     }

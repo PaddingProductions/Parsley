@@ -3,11 +3,11 @@ use super::core::*;
 use super::block::block;
 use super::expr::expression;
 use crate::ast::{If, Operation, Types};
-use crate::interpreter::Environment;
+use crate::interpreter::{Environment, InterpreterErr, inter_err};
 
 
 impl Operation for If {
-    fn exec (&self, env: &mut Environment) -> Result<(),()> {
+    fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         if let Types::Bool(b) = self.expr.eval(env)? {
             if b {
                 return self.block.exec(env);
@@ -15,7 +15,7 @@ impl Operation for If {
                 Ok(())
             }
         } else {
-            return Err(()); // Expression does not evaluate to a boolean
+            return Err(inter_err("'if' expression does not evaluate to Bool()")); // Expression does not evaluate to a boolean
         }
     }
 }

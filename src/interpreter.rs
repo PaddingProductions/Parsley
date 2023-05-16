@@ -8,3 +8,11 @@ impl Environment {
         Self { vars: std::collections::HashMap::new() }
     }
 }
+
+#[derive(Debug)]
+pub enum InterpreterErr {
+    Err(String),
+}
+pub fn inter_err (s: &str) -> InterpreterErr {
+    InterpreterErr::Err(s.to_owned())
+}
