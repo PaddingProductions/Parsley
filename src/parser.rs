@@ -71,6 +71,14 @@ where
     pub fn option (self) -> BoxedParser<'a, Option<T>> {
         BoxedParser::new(option(self))
     }
+    pub fn option_with_default (self, default: &'a dyn Fn() -> T) -> BoxedParser<'a, T> {
+        BoxedParser::new(
+            map(
+                option(self),
+                move |o| o.unwrap_or_else(default)
+            )
+        )
+    }
 
     pub fn map<O, F> (self, f: F) -> BoxedParser<'a, O> 
     where

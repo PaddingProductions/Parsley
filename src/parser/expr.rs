@@ -123,11 +123,27 @@ fn base<'a> () -> impl Parser<'a, Box<dyn Evaluable>> {
             iter.next();
         }
         let buf = &buf[counter..];
+
         // If parenthesis
         if iter.peek() == Some(&'(') {
             return expression().parse(&buf[1..])
                 .map(|(buf, op)| (&buf[1..], op));
         }
+
+        // If conditional
+        if let Ok(_) = parse_literal("if ").parse(buf) {
+            return conditional::conditional_if()
+                .map(|o| -> Box<dyn Evaluable> { Box::new(o) })
+                .parse(buf)
+        }   
+
+        // If block
+        if iter.peek() == Some(&'{') {
+            return block::block()
+                .map(|o| -> Box<dyn Evaluable> { Box::new(o) })
+                .parse(buf)
+        }   
+
         // If Identifier 
         if let Ok((buf, o)) = parse_identifier().parse(buf) {
             return Ok((buf, Box::new(Ident(o))));
