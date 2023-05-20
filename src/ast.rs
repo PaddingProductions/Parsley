@@ -40,4 +40,8 @@ pub struct If {
     pub block: Block, 
 }
 
+pub struct Loop {
+    pub expr: Box<dyn Evaluable>,
+    pub block: Block,
+}
 

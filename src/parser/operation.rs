@@ -4,6 +4,7 @@ use super::*;
 use super::assign::assignment;
 use super::block::block;
 use super::conditional::conditional_if;
+use super::_loop::_while;
 use super::print::print;
 use crate::ast::*;
 
@@ -19,6 +20,9 @@ pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
             Ok((buf, box_operation(out)))
         } else 
         if let Ok((buf, out)) = conditional_if().parse(buf) {
+            Ok((buf, box_operation(out)))
+        } else 
+        if let Ok((buf, out)) = _while().parse(buf) {
             Ok((buf, box_operation(out)))
         } else {
             par_err("no valid operation found.")
