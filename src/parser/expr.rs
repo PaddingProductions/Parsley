@@ -124,7 +124,10 @@ fn base<'a> () -> impl Parser<'a, Box<dyn Evaluable>> {
             counter += 1;
             iter.next();
         }
-        let buf = &buf[counter..];
+        let mut buf = &buf[counter..];
+
+        // If negation 
+        let negation = if let Ok((b, _)) = parse_literal("-").parse(buf) { buf = b; true } else { false };
 
         // If parenthesis
         if iter.peek() == Some(&'(') {
