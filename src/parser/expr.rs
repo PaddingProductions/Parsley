@@ -10,7 +10,7 @@ const OPERATORS: [&str; 5] = [
     "||",
     "&&",
     "+ -",
-    "* /",
+    "* / %",
 ];
 
 struct Expr {
@@ -62,6 +62,7 @@ impl Evaluable for Expr {
                         "-" => res -= v,
                         "*" => res *= v,
                         "/" => res /= v,
+                        "%" => res %= v,
                         _ => return Err(inter_err("Not a Num() operator")) //"Not a valid Num() operator"
                     }
                 }
@@ -83,6 +84,7 @@ impl Evaluable for Expr {
                 Ok(Bool(res))
             }
             Ident(_) => panic!("t0 still an Ident(). This should never happen."),
+            Nil => return Ok(Nil),
             _ => panic!("not implemented yet!")
         }
     }

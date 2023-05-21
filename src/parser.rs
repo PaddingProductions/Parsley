@@ -16,8 +16,8 @@ pub struct ParseErr {
     msg: String
 }
 impl ParseErr {
-    pub fn new (s: &str) -> Self {
-        Self { msg: s.to_string() }
+    pub fn new (s: String) -> Self {
+        Self { msg: s }
     }
 }
 impl std::fmt::Display for ParseErr {
@@ -27,6 +27,9 @@ impl std::fmt::Display for ParseErr {
 }
 impl std::error::Error for ParseErr {}
 pub fn par_err<T> (s: &str) -> ParseRes<T> {
+    Err( ParseErr::new(s.to_owned()) )
+}
+pub fn par_err_s<'a, T> (s: String) -> ParseRes<'a, T> {
     Err( ParseErr::new(s) )
 }
 
@@ -108,6 +111,12 @@ where
 
     pub fn zero_or_more (self) -> BoxedParser<'a, Vec<T>> {
         BoxedParser::new( zero_or_more(self) )
+    }
+    pub fn prefix (self, suf: &'a str) -> BoxedParser<'a, T> {
+        BoxedParser::new( prefix(suf, self) )
+    }
+    pub fn suffix (self, suf: &'a str) -> BoxedParser<'a, T> {
+        BoxedParser::new( suffix(suf, self) )
     }
 }
 impl<'a, T> Parser<'a, T> for BoxedParser<'a, T> {

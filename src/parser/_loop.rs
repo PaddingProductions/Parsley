@@ -1,10 +1,8 @@
-use crate::ast::{ Loop, Operation, Types };
+use crate::ast::{ Loop, Operation, Block, Types };
 use crate::interpreter::{InterpreterErr, Environment};
 
-use super::BoxedParser;
-use super::block::block;
-use super::expr::expression;
-use super::core::parse_literal;
+use super::*;
+use super::core::{parse_literal, surround};
 
 impl Operation for Loop {
     fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
@@ -18,7 +16,67 @@ impl Operation for Loop {
 
 pub fn _while<'a> () -> BoxedParser<'a, Loop> {
     BoxedParser::new(parse_literal("while "))
-        .and(expression())
-        .and(block())
+        .and(expr::expression())
+        .and(block::block())
         .map(|((_, expr), block)| Loop{ expr, block })
+}
+
+pub fn _for<'a> () -> BoxedParser<'a, Block> {
+    let func = |((assign, expr, op), mut block): (_, Block)| -> Block { 
+        block.ops.push(op);
+        let lop = Loop {
+            expr, 
+            block
+        };
+        let vec: Vec<Box<dyn Operation>> = vec![Box::new(assign), Box::new(lop)];
+        Block { ops: vec, ret_expr: None } 
+    };
+
+    BoxedParser::new(parse_literal("for"))
+        .and(
+            surround("(", ")", 
+                assign::assignment().suffix(";")
+                    .and(expr::expression().suffix(";"))
+                    .and(operation::operation())
+                    .map(|((a, b), c)| (a, b, c))
+            ),
+        )
+        .map(|(_, a)| a)
+        .and(block::block())
+        .map(func)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ast::Types;
+    use crate::parser::operation::operation;
+    use crate::interpreter::Environment;
+
+    #[test]
+    fn test_while () {
+        let mut env = Environment::new();
+        let input1 = "cnt=0";
+        let input2 = "i = 0";
+        let input3 = "while i != 10 { if i % 2 == 0 { cnt = cnt + 1; }; i = i + 1; }";
+
+        operation().parse(input1).unwrap().1.exec(&mut env).unwrap();
+        operation().parse(input2).unwrap().1.exec(&mut env).unwrap();
+        _while().parse(input3).unwrap().1.exec(&mut env).unwrap();
+        
+        assert!(*env.vars.get("i").unwrap() == Types::Num(10.0));
+        assert!(*env.vars.get("cnt").unwrap() == Types::Num(5.0));
+    }
+
+    #[test]
+    fn test_for () {
+        let mut env = Environment::new();
+        let input1 = "cnt = 0";
+        let input2 = "for (i=0; i!=10; i=i+1) { if i % 2 == 0 { cnt = cnt + 1; } }";
+
+        operation().parse(input1).unwrap().1.exec(&mut env).unwrap();
+        _for().parse(input2).unwrap().1.exec(&mut env).unwrap();
+        
+        assert!(*env.vars.get("cnt").unwrap() == Types::Num(5.0));
+    }
 }

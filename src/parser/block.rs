@@ -9,6 +9,7 @@ impl Evaluable for Block {
         for op in self.ops.iter() {
             op.exec(env)?;
         }
+        println!("{:?}", self.ret_expr.is_some());
         let out = if let Some(expr) = self.ret_expr.as_ref() { expr.eval(env)? } else { Types::Nil };
         Ok(out)       
     }
@@ -48,10 +49,13 @@ mod tests {
     #[test]
     fn test_block_return () {
         let mut env = Environment::new();
-        let input = "a = { b = 10; b - 9 } + 10";
+        let input1 = "a = { b = 10; b - 9 } + 10";
+        let input2 = "c = 2 * { a - 9 }";
 
-        assignment().parse(input).unwrap().1.exec(&mut env).unwrap();
+        assignment().parse(input1).unwrap().1.exec(&mut env).unwrap();
+        assignment().parse(input2).unwrap().1.exec(&mut env).unwrap();
         
-        assert!(*env.vars.get("a").unwrap()   == Types::Num(11.0));
+        assert!(*env.vars.get("a").unwrap() == Types::Num(11.0));
+        assert!(*env.vars.get("c").unwrap() == Types::Num(4.0));
     }
 }

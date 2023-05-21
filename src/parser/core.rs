@@ -114,7 +114,7 @@ where
 pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
     move |input: &'a str| match input.get(0..lit.len()) {
         Some(s) if s == lit => Ok((&input[lit.len()..], lit)),
-        _ => par_err("Literal not found")
+        _ => par_err_s(format!("Literal '{}' not found", lit))
     } 
 }
 
@@ -127,7 +127,7 @@ pub fn parse_literals<'a> (lits: Vec<&'a str>) -> impl Parser<'a, &str> {
                 _ => continue
             }
         }
-        par_err("Literal Not Found")
+        par_err_s(format!("Literal '{:?}' not found", lits))
     }
 }
 

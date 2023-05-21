@@ -34,9 +34,9 @@ mod tests {
         let input2 = "var2=1+2";
         let input3 = "_var3=1*2+3*4+4";
 
-        assignment().parse(input1).unwrap().1.exec(&mut env);
-        assignment().parse(input2).unwrap().1.exec(&mut env);
-        assignment().parse(input3).unwrap().1.exec(&mut env);
+        assignment().parse(input1).unwrap().1.exec(&mut env).unwrap();
+        assignment().parse(input2).unwrap().1.exec(&mut env).unwrap();
+        assignment().parse(input3).unwrap().1.exec(&mut env).unwrap();
         
         assert!(*env.vars.get("var1").unwrap()   == Types::Num(1.0));
         assert!(*env.vars.get("var2").unwrap()   == Types::Num(3.0));

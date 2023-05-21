@@ -25,7 +25,7 @@ pub fn conditional_if<'a> () -> BoxedParser<'a, If> {
         .and(block())
         .map(|((_, expr), block)| (expr, block))
         .and(
-            BoxedParser::new(parse_literal("else "))
+            BoxedParser::new(parse_literal("else"))
                 .and(block())
                 .map(|(_, block)| block)
                 .option_with_default(&|| Block::empty())
