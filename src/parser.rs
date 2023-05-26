@@ -11,29 +11,52 @@ use std::boxed::Box;
 
 use self::core::*;
 
+const BLD: &str = "\x1b[1m";
+const RST: &str = "\x1b[0m";
+
 #[derive(Debug, PartialEq, Eq)]
-pub struct ParseErr {
-    msg: String
+pub struct ParseErr<'a> {
+    msg: String,
+    ptr: &'a str,
 }
-impl ParseErr {
-    pub fn new (s: String) -> Self {
-        Self { msg: s }
+impl<'a> ParseErr<'a> {
+    pub fn new (s: String, ptr: &'a str) -> Self {
+        Self { msg: s, ptr }
     }
-}
-impl std::fmt::Display for ParseErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Parser Err: {}", self.msg)
+
+    pub fn print(&self, buf: &str) {
+
+        // Calculate index
+        let ptr = self.ptr.as_ptr() as usize;
+        let index = ptr - buf.as_ptr() as usize;
+
+        // Get relevant line
+        let (line, line_index) = {
+            let mut l = index;
+            let mut r = index;
+            while l != 0 && buf.get((l-1)..l).unwrap() != "\n" { l -= 1; }
+            while buf.get(r..=r).is_some() && buf.get(r..=r).unwrap() != "\n" { r += 1; }
+            (&buf[l..r], index - l)
+        };
+        println!("{BLD}[== Parser Err ==]{RST}  {}", self.msg);
+        println!("--> at character #{BLD}{}{RST}", index);
+        println!("|\n|\t{}", line);
+        print!("|\t");
+        for _ in 0..line_index {
+            print!(" ");
+        }
+        println!("{BLD}^ Here{RST}");
     }
-}
-impl std::error::Error for ParseErr {}
-pub fn par_err<T> (s: &str) -> ParseRes<T> {
-    Err( ParseErr::new(s.to_owned()) )
-}
-pub fn par_err_s<'a, T> (s: String) -> ParseRes<'a, T> {
-    Err( ParseErr::new(s) )
 }
 
-pub type ParseRes<'a, T> = Result<(&'a str, T), ParseErr>;
+pub fn par_err_s<T> (ptr: &str, s: String) -> ParseRes<T> {
+    Err( ParseErr::new(s, ptr) )
+}
+pub fn par_err<'a, T> (ptr: &'a str, s: &str) -> ParseRes<'a, T> {
+    par_err_s(ptr, s.to_owned())
+}
+
+pub type ParseRes<'a, T> = Result<(&'a str, T), ParseErr<'a>>;
 pub trait Parser<'a, T> {
     fn parse (&self, s: &'a str) -> ParseRes<'a, T>;
 }

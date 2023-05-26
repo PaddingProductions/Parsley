@@ -42,7 +42,8 @@ fn main () {
                     }
                 },
                 Err(e) => {
-                    println!("Invalid Syntax While Parsing: '{}'\nError: {}", s, e);
+                    println!("Parsing Failed");
+                    e.print(s);
                     break;
                 }
             };

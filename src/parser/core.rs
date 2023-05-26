@@ -68,7 +68,7 @@ where
             buf_out = buf;
         }
         if v.is_empty() {
-            par_err("none of pattern found in 'one_or_more'")
+            par_err(buf, "none of pattern found in 'one_or_more'")
         } else {
             Ok((buf_out, v))
         }
@@ -112,9 +112,9 @@ where
 }
 
 pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
-    move |input: &'a str| match input.get(0..lit.len()) {
-        Some(s) if s == lit => Ok((&input[lit.len()..], lit)),
-        _ => par_err_s(format!("Literal '{}' not found", lit))
+    move |buf: &'a str| match buf.get(0..lit.len()) {
+        Some(s) if s == lit => Ok((&buf[lit.len()..], lit)),
+        _ => par_err_s(buf, format!("Literal '{}' not found", lit))
     } 
 }
 
@@ -127,7 +127,7 @@ pub fn parse_literals<'a> (lits: Vec<&'a str>) -> impl Parser<'a, &str> {
                 _ => continue
             }
         }
-        par_err_s(format!("Literal '{:?}' not found", lits))
+        par_err_s(buf, format!("Literal '{:?}' not found", lits))
     }
 }
 
@@ -135,13 +135,13 @@ pub fn parse_tok_with_rule<'a, R> (rule: R) -> impl Parser<'a, String>
 where
     R: Fn (char) -> bool
 {
-    move |input: &'a str| {
+    move |buf: &'a str| {
         let mut tok = String::new();
-        let mut iter = input.chars();
+        let mut iter = buf.chars();
 
         match iter.next() {
             Some(c) if rule(c) => tok.push(c),
-            _ => return par_err("First character does not satisfy rule")
+            _ => return par_err(buf, "First character does not satisfy rule")
         }
         while let Some(c) = iter.next() {
             if rule(c) {
@@ -149,24 +149,24 @@ where
             } else { break }
         }
         if tok.is_empty() {
-            par_err("Empty Token.")
+            par_err(buf, "Empty Token.")
         } else {
-            Ok((&input[tok.len()..], tok))
+            Ok((&buf[tok.len()..], tok))
         }
     }
 }
 
 
 pub fn parse_number<'a> () -> impl Parser<'a, f64> {
-    move |input: &'a str| {
+    move |buf: &'a str| {
         let num_rule = |c: char| {
             c.is_ascii_digit() || c == '.'
         };
-        let (buf, tok) = parse_tok_with_rule(num_rule).parse(input)?;
+        let (buf, tok) = parse_tok_with_rule(num_rule).parse(buf)?;
         if let Ok(num) = tok.parse::<f64>() {
             Ok((buf, num))
         } else {
-            par_err("could not parse into number")
+            par_err(buf, "could not parse into number")
         }
     }
 }
@@ -178,8 +178,8 @@ pub fn parse_identifier<'a> () -> impl Parser<'a, String> {
         };
         let (buf, tok) = parse_tok_with_rule(rule).parse(input)?;
 
-        if tok.chars().next().unwrap().is_ascii_digit() { return par_err("identifier cannot start with digit") }
-        if KEYWORDS.contains(&tok.as_str())             { return par_err("found keyword, cannot be used as identifier") }
+        if tok.chars().next().unwrap().is_ascii_digit() { return par_err(buf, "identifier cannot start with digit") }
+        if KEYWORDS.contains(&tok.as_str())             { return par_err(buf, "found keyword, cannot be used as identifier") }
 
         Ok((buf, tok))
     }

@@ -1,4 +1,4 @@
-use crate::ast::{ Loop, Operation, Block, Types, Assignment, Evaluable };
+use crate::ast::{ Loop, Operation, Block, Types};
 use crate::interpreter::{InterpreterErr, Environment};
 
 use super::*;

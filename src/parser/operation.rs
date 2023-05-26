@@ -1,31 +1,40 @@
 use std::boxed::Box;
 
 use super::*;
-use super::assign::assignment;
-use super::block::block;
-use super::conditional::conditional_if;
-use super::_loop::_while;
-use super::print::print;
 use crate::ast::*;
 
 pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
    BoxedParser::new( |buf: &'a str| {
-        if let Ok((buf, out)) = print().parse(buf) {
-            Ok((buf, out))
+        // If conditional
+        if let Ok(_) = parse_literal("{").parse(buf) {
+            block::block()
+                .map(box_operation)
+                .parse(buf)
+        } else  
+        if let Ok(_) = parse_literal("for").parse(buf) {
+            _loop::_for()
+                .map(box_operation)
+                .parse(buf)
         } else 
-        if let Ok((buf, out)) = assignment().parse(buf) {
+        if let Ok(_) = parse_literal("while").parse(buf) {
+            _loop::_while()
+                .map(box_operation)
+                .parse(buf)
+        } else 
+        if let Ok(_) = parse_literal("if").parse(buf) {
+            conditional::conditional_if()
+                .map(box_operation)
+                .parse(buf)
+        } else 
+        if let Ok(_) = parse_literal("print").parse(buf) {
+            print::print()
+                .parse(buf)
+        } else 
+        if let Ok((buf, out)) = assign::assignment().parse(buf) {
             Ok((buf, box_operation(out)))
         } else
-        if let Ok((buf, out)) = block().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else 
-        if let Ok((buf, out)) = conditional_if().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else 
-        if let Ok((buf, out)) = _while().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else {
-            par_err("no valid operation found.")
+        {
+            par_err(buf, "no valid operation found.")
         }
     })
 }

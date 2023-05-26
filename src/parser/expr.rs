@@ -85,7 +85,6 @@ impl Evaluable for Expr {
             }
             Ident(_) => panic!("t0 still an Ident(). This should never happen."),
             Nil => return Ok(Nil),
-            _ => panic!("not implemented yet!")
         }
     }
 }
@@ -119,15 +118,9 @@ fn term<'a> (p: usize) -> BoxedParser<'a, Box<dyn Evaluable>> {
 fn base<'a> () -> impl Parser<'a, Box<dyn Evaluable>> {
     |buf: &'a str| -> ParseRes<'a, Box<dyn Evaluable>> {
         let mut iter = buf.chars().peekable();
-        let mut counter = 0;
-        while iter.peek() == Some(&' ') { 
-            counter += 1;
-            iter.next();
-        }
-        let mut buf = &buf[counter..];
-
+        
         // If negation 
-        let negation = if let Ok((b, _)) = parse_literal("-").parse(buf) { buf = b; true } else { false };
+        // let negation = if let Ok((b, _)) = parse_literal("-").parse(buf) { buf = b; true } else { false };
 
         // If parenthesis
         if iter.peek() == Some(&'(') {
@@ -163,7 +156,7 @@ fn base<'a> () -> impl Parser<'a, Box<dyn Evaluable>> {
             return Ok((buf, Box::new(Bool(s == "true"))));
         }   
 
-        par_err("no base found")
+        par_err(buf, "no base found")
     }
 }
 
