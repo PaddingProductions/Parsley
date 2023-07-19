@@ -1,11 +1,12 @@
 use super::*;
 use super::core::*;
-use crate::{ast::{Operation, Evaluable}, interpreter::{Environment, InterpreterErr}};
+use crate::ast::{Operation, Expr, Evaluable};
+use crate::interpreter::{Environment, InterpreterErr};
 
 use super::expr::expression;
 
 struct Print {
-    e: Box<dyn Evaluable>
+    e: Expr
 }
 
 impl Operation for Print {

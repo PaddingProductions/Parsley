@@ -1,13 +1,15 @@
 use crate::interpreter::{Environment, InterpreterErr};
 use std::boxed::Box;
 
+pub use crate::parser::expr::Expr;
+
 pub trait Operation {
     fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr>;
 }
 
 pub struct Block {
     pub ops: Vec<Box<dyn Operation>>,
-    pub ret_expr: Option<Box<dyn Evaluable>>
+    pub ret_expr: Option<Expr>
 } 
 impl Block {
     pub fn empty () -> Self {
@@ -17,15 +19,14 @@ impl Block {
 
 pub struct Assignment {
     pub ident: String, 
-    pub expr: Box<dyn Evaluable>
+    pub expr: Expr 
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Types {
     Nil,
     Num (f64),
-    Bool (bool),
-    Ident (String)
+    Bool (bool)
 }
 
 pub trait Evaluable {
@@ -43,13 +44,13 @@ impl<T: Evaluable> Operation for T {
 
 
 pub struct If {
-    pub expr: Box<dyn Evaluable>,
+    pub expr: Expr,
     pub block: Block, 
     pub else_block: Block,
 }
 
 pub struct Loop {
-    pub expr: Box<dyn Evaluable>,
+    pub expr: Expr,
     pub block: Block,
 }
 
