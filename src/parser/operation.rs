@@ -60,12 +60,12 @@ mod tests {
         let input2 = "var2=var2+var1*var3";
         let input3 = "var3=var2+var1";
 
-        operation().parse(input1).unwrap().1.exec(&mut env).unwrap();
-        operation().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        operation().parse(input3).unwrap().1.exec(&mut env).unwrap();
+        operation().test(input1).exec(&mut env).unwrap();
+        operation().test(input2).exec(&mut env).unwrap();
+        operation().test(input3).exec(&mut env).unwrap();
         
-        assert!(*env.vars.get("var1").unwrap() == Types::Num(1.0));
-        assert!(*env.vars.get("var2").unwrap() == Types::Num(5.0));
-        assert!(*env.vars.get("var3").unwrap() == Types::Num(6.0));
+        assert!(*env.test("var1") == Types::Num(1.0));
+        assert!(*env.test("var2") == Types::Num(5.0));
+        assert!(*env.test("var3") == Types::Num(6.0));
     }
 }

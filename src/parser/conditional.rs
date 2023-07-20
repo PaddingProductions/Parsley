@@ -15,7 +15,7 @@ impl Evaluable for If {
                 return self.else_block.eval(env);
             }
         } else {
-            return Err(inter_err("'if' expression does not evaluate to Bool()")); // Expression does not evaluate to a boolean
+            return inter_err("'if' expression does not evaluate to Bool()") // Expression does not evaluate to a boolean
         }
     }
 }
@@ -48,12 +48,13 @@ mod tests {
         let input3 = "if 1*3==4*2-5{res2=2;}";
         let input4 = "if true!=false{res2=3;}";
 
-        block().parse(input1).unwrap().1.eval(&mut env).unwrap();
-        conditional_if().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        conditional_if().parse(input3).unwrap().1.exec(&mut env).unwrap();
-        conditional_if().parse(input4).unwrap().1.exec(&mut env).unwrap();
-        assert!(*env.vars.get("res1").unwrap() == Types::Num(0.0));
-        assert!(*env.vars.get("res2").unwrap() == Types::Num(3.0));
+        block().test(input1).eval(&mut env).unwrap();
+        conditional_if().test(input2).exec(&mut env).unwrap();
+        conditional_if().test(input3).exec(&mut env).unwrap();
+        conditional_if().test(input4).exec(&mut env).unwrap();
+
+        assert!(*env.test("res1") == Types::Num(0.0));
+        assert!(*env.test("res2") == Types::Num(3.0));
     }
 
     #[test]
@@ -62,8 +63,8 @@ mod tests {
         let input1 = "{a=0; b=0;}";
         let input2 = "c = if a == b { b + 2 } * 2";
 
-        block().parse(input1).unwrap().1.eval(&mut env).unwrap();
-        assignment().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        assert!(*env.vars.get("c").unwrap() == Types::Num(4.0));
+        block().test(input1).eval(&mut env).unwrap();
+        assignment().test(input2).exec(&mut env).unwrap();
+        assert!(*env.test("c") == Types::Num(4.0));
     }
 }

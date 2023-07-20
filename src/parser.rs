@@ -147,3 +147,10 @@ impl<'a, T> Parser<'a, T> for BoxedParser<'a, T> {
         self.parser.parse(buf)
     }
 }
+
+#[cfg(test)]
+impl<'a, T> BoxedParser<'a, T> {
+    fn test (&self, buf: &'a str) -> T {
+        self.parser.parse(buf).unwrap().1
+    }
+}

@@ -66,12 +66,12 @@ mod test {
         let input2 = "i = 0";
         let input3 = "while i != 10 { if i % 2 == 0 { cnt = cnt + 1; }; i = i + 1; }";
 
-        operation().parse(input1).unwrap().1.exec(&mut env).unwrap();
-        operation().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        _while().parse(input3).unwrap().1.exec(&mut env).unwrap();
+        operation().test(input1).exec(&mut env).unwrap();
+        operation().test(input2).exec(&mut env).unwrap();
+        _while().test(input3).exec(&mut env).unwrap();
         
-        assert!(*env.vars.get("i").unwrap() == Types::Num(10.0));
-        assert!(*env.vars.get("cnt").unwrap() == Types::Num(5.0));
+        assert!(*env.test("i")   == Types::Num(10.0));
+        assert!(*env.test("cnt") == Types::Num(5.0));
     }
 
     #[test]
@@ -82,12 +82,13 @@ mod test {
         let input3 = "d = 0";
         let input4 = "for (; i!=5;) { d = d + i; i = i - 1; }";
 
-        assignment().parse(input1).unwrap().1.exec(&mut env).unwrap();
-        _for().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        assignment().parse(input3).unwrap().1.exec(&mut env).unwrap();
-        _for().parse(input4).unwrap().1.exec(&mut env).unwrap();
+        assignment().test(input1).exec(&mut env).unwrap();
+        _for().test(input2).exec(&mut env).unwrap();
+
+        assignment().test(input3).exec(&mut env).unwrap();
+        _for().test(input4).exec(&mut env).unwrap();
         
-        assert!(*env.vars.get("cnt").unwrap() == Types::Num(5.0));
-        assert!(*env.vars.get("d").unwrap() == Types::Num(40.0));
+        assert!(*env.test("cnt") == Types::Num(5.0));
+        assert!(*env.test("d")   == Types::Num(40.0));
     }
 }

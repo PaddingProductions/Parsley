@@ -24,11 +24,7 @@ impl Evaluable for Term {
             Num(v) => Ok(Types::Num(v.clone())),
             Bool(b) => Ok(Types::Bool(b.clone())),
             Ident(b) => {
-                if let Some(t) = env.vars.get(b) {
-                    Ok(t.clone())
-                } else {
-                    Err(inter_err("cannot resolve variable {self}"))
-                }
+                env.var(b).map(|v| v.clone())
             },
         }
     }
@@ -44,14 +40,14 @@ impl Types {
     fn to_num (&self) -> Result<f64, InterpreterErr> {
         match self {
             Types::Num(v) => Ok(v.clone()),
-            _ => Err(inter_err("Term {self} does not resolve to a number"))
+            _ => inter_err("Term {self} does not resolve to a number")
         }
     }
 
     fn to_bool (&self) -> Result<bool, InterpreterErr> {
         match self {
             Types::Bool(v) => Ok(v.clone()),
-            _ => Err(inter_err("Term {self} does not resolve to a number"))
+            _ => inter_err("Term {self} does not resolve to a number")
         }
     }
 }
@@ -75,7 +71,7 @@ impl Evaluable for Expr {
                         "*" => res *= v,
                         "/" => res /= v,
                         "%" => res %= v,
-                        _ => return Err(inter_err("{op} is not a valid NUM operator")) //"Not a valid Num() operator"
+                        _ => return inter_err("{op} is not a valid NUM operator") //"Not a valid Num() operator"
                     }
                 }
                 Ok(Types::Num(res))
@@ -89,7 +85,7 @@ impl Evaluable for Expr {
                         "!=" => return Ok(Types::Bool(res != b)),
                         "&&" => res &= b,
                         "||" => res |= b,
-                        _ => return Err(inter_err("{op} is not a valid BOOL operator")) //"Not a valid Bool() operator"
+                        _ => return inter_err("{op} is not a valid BOOL operator") //"Not a valid Bool() operator"
                     }
                 }
                 Ok(Types::Bool(res))
@@ -100,7 +96,7 @@ impl Evaluable for Expr {
                 if self.v.is_empty() {
                     Ok(Types::Nil)
                 } else {
-                    Err(inter_err("cannot operate on NIL"))
+                    inter_err("cannot operate on NIL")
                 }
             },
         }
@@ -205,9 +201,9 @@ mod tests {
         let input2 = "1+2*3";
         let input3 = "1*2+3*4+4";
 
-        assert!(expression().parse(input1).unwrap().1.eval(&mut env).unwrap() == Types::Num(3.0));
-        assert!(expression().parse(input2).unwrap().1.eval(&mut env).unwrap() == Types::Num(7.0));
-        assert!(expression().parse(input3).unwrap().1.eval(&mut env).unwrap() == Types::Num(18.0));
+        assert!(expression().test(input1).eval(&mut env).unwrap() == Types::Num(3.0));
+        assert!(expression().test(input2).eval(&mut env).unwrap() == Types::Num(7.0));
+        assert!(expression().test(input3).eval(&mut env).unwrap() == Types::Num(18.0));
     }
 
     #[test] 
@@ -218,9 +214,9 @@ mod tests {
         let input3 = "2!=2";
         let input4 = "1*2+3==4+4-3";
 
-        assert!(expression().parse(input1).unwrap().1.eval(&mut env).unwrap()== Types::Bool(false));
-        assert!(expression().parse(input2).unwrap().1.eval(&mut env).unwrap()== Types::Bool(true));
-        assert!(expression().parse(input3).unwrap().1.eval(&mut env).unwrap()== Types::Bool(false));
-        assert!(expression().parse(input4).unwrap().1.eval(&mut env).unwrap()== Types::Bool(true));
+        assert!(expression().test(input1).eval(&mut env).unwrap() == Types::Bool(false));
+        assert!(expression().test(input2).eval(&mut env).unwrap() == Types::Bool(true));
+        assert!(expression().test(input3).eval(&mut env).unwrap() == Types::Bool(false));
+        assert!(expression().test(input4).eval(&mut env).unwrap() == Types::Bool(true));
     }
 }

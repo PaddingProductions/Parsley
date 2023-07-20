@@ -8,7 +8,7 @@ impl Operation for Assignment {
     fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         let val = self.expr.eval(env)?;
         println!("setting '{}' to {:?}", self.ident, val);
-        env.vars.insert(self.ident.clone(), val);
+        env.set(&self.ident, val);
         Ok(())
     }
 }
@@ -34,12 +34,12 @@ mod tests {
         let input2 = "var2=1+2";
         let input3 = "_var3=1*2+3*4+4";
 
-        assignment().parse(input1).unwrap().1.exec(&mut env).unwrap();
-        assignment().parse(input2).unwrap().1.exec(&mut env).unwrap();
-        assignment().parse(input3).unwrap().1.exec(&mut env).unwrap();
+        assignment().test(input1).exec(&mut env).unwrap();
+        assignment().test(input2).exec(&mut env).unwrap();
+        assignment().test(input3).exec(&mut env).unwrap();
         
-        assert!(*env.vars.get("var1").unwrap()   == Types::Num(1.0));
-        assert!(*env.vars.get("var2").unwrap()   == Types::Num(3.0));
-        assert!(*env.vars.get("_var3").unwrap()  == Types::Num(18.0));
+        assert!(*env.test("var1")  == Types::Num(1.0));
+        assert!(*env.test("var2")  == Types::Num(3.0));
+        assert!(*env.test("_var3") == Types::Num(18.0));
     }
 }
