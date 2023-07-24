@@ -1,3 +1,6 @@
+#![feature(lazy_cell)]
+#![allow(non_upper_case_globals)]
+
 use std::io::{self, BufRead, Write};
 
 mod ast;
@@ -34,7 +37,7 @@ fn main () {
 
         let mut s: &str = stream.trim();
         while !s.is_empty() {
-            match operation().parse(s) {
+            match operation.parse(s) {
                 Ok((buf, op)) => {
                     s = buf;
                     if let Err(err) = op.exec(&mut env) {

@@ -1,12 +1,12 @@
-use super::*;
+use super::BoxedParser;
 use super::core::*;
-use crate::ast::{Operation, Expr, Evaluable};
+use crate::ast::{Operation, Evaluable};
 use crate::interpreter::{Environment, InterpreterErr};
+use super::expr;
 
-use super::expr::expression;
 
 struct Print {
-    e: Expr
+    e: expr::Expr 
 }
 
 impl Operation for Print {
@@ -17,10 +17,6 @@ impl Operation for Print {
 }
 
 pub fn print<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
-    BoxedParser::new( 
-        prefix( "print ",
-            expression()
-        ) 
-    )
+    BoxedParser::new(  prefix("print ", expr::Expr::any)  )
         .map( |e| -> Box<dyn Operation> {Box::new(Print{ e })} )
 }

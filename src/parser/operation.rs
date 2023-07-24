@@ -3,40 +3,33 @@ use std::boxed::Box;
 use super::*;
 use crate::ast::*;
 
-pub fn operation<'a> () -> BoxedParser<'a, Box<dyn Operation>> {
-   BoxedParser::new( |buf: &'a str| {
-        // If conditional
-        if let Ok(_) = parse_literal("{").parse(buf) {
-            block::block()
-                .map(box_operation)
-                .parse(buf)
-        } else  
-        if let Ok(_) = parse_literal("for").parse(buf) {
-            _loop::_for()
-                .map(box_operation)
-                .parse(buf)
-        } else 
-        if let Ok(_) = parse_literal("while").parse(buf) {
-            _loop::_while()
-                .map(box_operation)
-                .parse(buf)
-        } else 
-        if let Ok(_) = parse_literal("if").parse(buf) {
-            conditional::conditional_if()
-                .map(box_operation)
-                .parse(buf)
-        } else 
-        if let Ok(_) = parse_literal("print").parse(buf) {
-            print::print()
-                .parse(buf)
-        } else 
-        if let Ok((buf, out)) = assign::assignment().parse(buf) {
-            Ok((buf, box_operation(out)))
-        } else
-        {
-            par_err(buf, "no valid operation found.")
-        }
-    })
+pub fn operation<'a> (buf: &'a str) -> ParseRes<'a, Box<dyn Operation>> {
+    // If conditional
+    map(block::block, box_operation).parse(buf)
+    .or_else( 
+        |_| _loop::_for() 
+            .map(box_operation)
+            .parse(buf)
+    )
+    .or_else(
+        |_| _loop::_while()
+            .map(box_operation)
+            .parse(buf)
+    )
+    .or_else(
+        |_| map(conditional::conditional_if, box_operation)
+            .parse(buf)
+    )
+    .or_else(
+        |_| print::print()
+            .parse(buf)
+    )
+    .or_else(
+        |_| map(declare::declaration, box_operation).parse(buf)
+    )
+    .or_else(
+        |_| map(assign::assignment(), box_operation).parse(buf) 
+    )
 }
 
 fn box_operation<T> (o: T) -> Box<dyn Operation>
@@ -56,16 +49,18 @@ mod tests {
     #[test] 
     fn test_operation () {
         let mut env = Environment::new();
-        let input1 = "{var1=1;var2=1+1;var3=3;}";
-        let input2 = "var2=var2+var1*var3";
-        let input3 = "var3=var2+var1";
+        let input1 = "let var1 = 1";
+        let input2 = "let var2 = 1+1";
+        let input3 = "var2 = var2+var1*3";
+        let input4 = "if true { var1 = 0 }";
 
-        operation().test(input1).exec(&mut env).unwrap();
-        operation().test(input2).exec(&mut env).unwrap();
-        operation().test(input3).exec(&mut env).unwrap();
+        let parser = BoxedParser::new(operation);
+        parser.test(input1).exec(&mut env).unwrap();
+        parser.test(input2).exec(&mut env).unwrap();
+        parser.test(input3).exec(&mut env).unwrap();
+        parser.test(input4).exec(&mut env).unwrap();
         
-        assert!(*env.test("var1") == Types::Num(1.0));
+        assert!(*env.test("var1") == Types::Num(0.0));
         assert!(*env.test("var2") == Types::Num(5.0));
-        assert!(*env.test("var3") == Types::Num(6.0));
     }
 }

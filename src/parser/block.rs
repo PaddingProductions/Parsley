@@ -1,11 +1,28 @@
-use super::{*, expr::expression};
-use super::core::*;
-use crate::ast::*;
-use super::operation::operation;
-use crate::interpreter::{Environment, InterpreterErr};
+use std::sync::OnceLock;
 
-impl Evaluable for Block {
-    fn eval (&self, env: &mut Environment) -> Result<Types, InterpreterErr> {
+use crate::parser::{
+    *,
+    core::*,
+};
+use crate::ast::Operation;
+use super::operation::operation;
+use crate::interpreter::{Environment, InterpRes};
+
+
+pub struct Block {
+    pub ops: Vec<Box<dyn Operation>>,
+} 
+
+
+impl Block {
+    pub fn empty () -> Self {
+        Block { ops: vec![] }
+    }
+} 
+
+
+impl Operation for Block {
+    fn exec (&self, env: &mut Environment) -> InterpRes<()> {
         
         // Spawn scope
         env.new_scope();
@@ -14,66 +31,50 @@ impl Evaluable for Block {
             op.exec(env)?;
         }
 
-        println!("{:?}", self.ret_expr.is_some());
-        let out = if let Some(expr) = self.ret_expr.as_ref() { expr.eval(env)? } else { Types::Nil };
-
         // Exit scope
         env.exit_scope();
-
-        Ok(out)       
+        Ok(())
     }
 }
 
-pub fn block<'a> () -> BoxedParser<'a, Block> {
-    BoxedParser::new( surround( "{", "}",
-        operation()
-            .zero_or_more()
-            .map(
-                |v| v.into_iter().collect()
-            )
-            .and( expression().option() )
-            .map(|(v, ret_expr)| Block { ops: v, ret_expr })
-    ))
+static cell: OnceLock<BoxedParser<Block>> = OnceLock::new();
+pub fn block<'a> (buf: &'a str) -> ParseRes<'a, Block> {
+    cell.get_or_init( 
+        || BoxedParser::new( prefix("{", zero_or_more(operation)) )
+            .map( |v| v.into_iter().collect() )
+            .and( parse_literal("}") )
+            .map( |(o, _)| o )
+            .map( |v| Block { ops: v } )
+    ).parse(buf)
 }
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interpreter::Environment;
+    use crate::ast::Types;
+    use crate::interpreter::{ 
+        Environment,
+        InterpreterErr
+    };
 
     #[test] 
-    fn test_block_scope () {
+    fn test_block () {
         let mut env = Environment::new();
-        let input1 = "var1 = 0;";
-        let input2 = "
-        {
-          var1=1;\n 
-          var2=1+2;
-          _var3=1*2+3*4+4;
+        let input1 = "let var1 = 0";
+        let input2 = "{
+          let var1 = 1\n 
+          let var3 = 10
         }";
 
-        operation().test(input1).exec(&mut env).unwrap();
-        block().test(input2).exec(&mut env).unwrap();
+        let operation = BoxedParser::new(operation);
+        let block = BoxedParser::new(block);
+
+        operation.test(input1).exec(&mut env).unwrap();
+        block.test(input2).exec(&mut env).unwrap();
         
         assert!(*env.test("var1") == Types::Num(0.0));
-
-        let v2 = env.var(&"var2".to_owned());
-        let v3 = env.var(&"_var3".to_owned());
-        assert!(matches!(Result::<&Types, InterpreterErr>::Err, v2));
+        let v3 = env.var(&"var3".to_owned());
         assert!(matches!(Result::<&Types, InterpreterErr>::Err, v3));
-    }
-
-    use super::assign::assignment;
-    #[test]
-    fn test_block_return () {
-        let mut env = Environment::new();
-        let input1 = "a = { b = 10; b - 9 } + 10";
-        let input2 = "c = 2 * { a - 9 }";
-
-        assignment().test(input1).exec(&mut env).unwrap();
-        assignment().test(input2).exec(&mut env).unwrap();
-        
-        assert!(*env.test("a") == Types::Num(11.0));
-        assert!(*env.test("c") == Types::Num(4.0));
     }
 }

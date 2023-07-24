@@ -1,45 +1,58 @@
-use super::*;
-use super::core::*;
-use super::expr::expression;
+use crate::parser::{
+    *,
+    core::*
+};
+use crate::ast::{
+    Operation,
+    Evaluable,
+    Expr
+};
 use crate::interpreter::{Environment, InterpreterErr};
-use crate::ast::*;
+
+
+
+pub struct Assignment {
+    pub ident: String, 
+    pub expr: Expr
+}
+
 
 impl Operation for Assignment {
     fn exec (&self, env: &mut Environment) -> Result<(), InterpreterErr> {
         let val = self.expr.eval(env)?;
         println!("setting '{}' to {:?}", self.ident, val);
-        env.set(&self.ident, val);
+        env.set(&self.ident, val)?;
         Ok(())
     }
 }
 
+
 pub fn assignment<'a> () -> BoxedParser<'a, Assignment> {
-    BoxedParser::new(parse_identifier()) 
+    BoxedParser::new(parse_identifier) 
         .and(parse_literal("="))
-        .and(expression())
+        .and(Expr::any)
         .map( 
             |((ident,  _), expr)| Assignment { ident, expr }
         )
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interpreter::Environment;
+    use crate::{ast::Types, parser::declare::declaration};
 
     #[test] 
     fn test_assignment () {
         let mut env = Environment::new();
-        let input1 = "var1=1";
-        let input2 = "var2=1+2";
-        let input3 = "_var3=1*2+3*4+4";
+        let input1 = "let var1=1";
+        let input2 = "var1=1+2";
 
-        assignment().test(input1).exec(&mut env).unwrap();
+        let declaration = BoxedParser::new(declaration);
+        declaration.test(input1).exec(&mut env).unwrap();
         assignment().test(input2).exec(&mut env).unwrap();
-        assignment().test(input3).exec(&mut env).unwrap();
         
-        assert!(*env.test("var1")  == Types::Num(1.0));
-        assert!(*env.test("var2")  == Types::Num(3.0));
-        assert!(*env.test("_var3") == Types::Num(18.0));
+        assert!(*env.test("var1")  == Types::Num(3.0));
     }
 }

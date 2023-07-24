@@ -1,6 +1,7 @@
 pub mod core;
 pub mod block;
 pub mod expr;
+pub mod declare;
 pub mod assign;
 pub mod conditional;
 pub mod operation;
@@ -57,14 +58,14 @@ pub fn par_err<'a, T> (ptr: &'a str, s: &str) -> ParseRes<'a, T> {
 }
 
 pub type ParseRes<'a, T> = Result<(&'a str, T), ParseErr<'a>>;
-pub trait Parser<'a, T> {
-    fn parse (&self, s: &'a str) -> ParseRes<'a, T>;
+pub trait Parser<T> {
+    fn parse<'a> (&self, s: &'a str) -> ParseRes<'a, T>;
 }
-impl<'a, F, T> Parser<'a, T> for F 
+impl<F, T> Parser<T> for F 
 where
-    F: Fn (&'a str) -> ParseRes<T>
+    F: Fn (& str) -> ParseRes<T>
 {
-    fn parse (&self, input: &'a str) -> ParseRes<'a, T> {
+    fn parse<'a> (&self, input: &'a str) -> ParseRes<'a, T> {
         let start = {
             let mut iter = input.chars();
             let mut counter = 0;
@@ -81,15 +82,15 @@ where
 }
 
 pub struct BoxedParser<'a, T> {
-    parser: Box<dyn Parser<'a, T> + 'a>
+    parser: Box<dyn Parser<T> + 'a>
 }
 impl<'a, T> BoxedParser<'a, T> 
 where
     T: 'a
 {
-    pub fn new<P> (p: P) -> Self
+    pub fn new<P> (p: P) -> BoxedParser<'a, T>
     where
-        P: Parser<'a, T> + 'a
+        P: Parser<T> + 'a
     {
         Self{ parser: Box::new(p) }
     }
@@ -97,7 +98,7 @@ where
     pub fn option (self) -> BoxedParser<'a, Option<T>> {
         BoxedParser::new(option(self))
     }
-    pub fn option_with_default (self, default: &'a dyn Fn() -> T) -> BoxedParser<'a, T> {
+    pub fn option_with_default (self, default: &'a dyn Fn() -> T) -> BoxedParser<T> {
         BoxedParser::new(
             map(
                 option(self),
@@ -109,7 +110,7 @@ where
     pub fn map<O, F> (self, f: F) -> BoxedParser<'a, O> 
     where
         O: 'a,
-        F: 'a + Fn(T) -> O
+        F: Fn(T) -> O + 'a
     {
         BoxedParser::new( map(self, f) ) 
     }
@@ -117,13 +118,13 @@ where
     pub fn and<B, P> (self, p: P) -> BoxedParser<'a, (T, B)> 
     where
         B: 'a,
-        P: 'a + Parser<'a, B>
+        P: Parser<B> + 'a
     {
         BoxedParser::new( and(self, p) ) 
     }
     pub fn or<P> (self, p: P) -> BoxedParser<'a, T> 
     where
-        P: 'a + Parser<'a, T>
+        P: Parser<T> +'a
     {
         BoxedParser::new( or(self, p) ) 
     }
@@ -135,22 +136,28 @@ where
     pub fn zero_or_more (self) -> BoxedParser<'a, Vec<T>> {
         BoxedParser::new( zero_or_more(self) )
     }
-    pub fn prefix (self, suf: &'a str) -> BoxedParser<'a, T> {
-        BoxedParser::new( prefix(suf, self) )
+    pub fn prefix<'b> (self, pre: &'b str) -> BoxedParser<'a, T> {
+        BoxedParser::new( prefix(pre, self) )
     }
-    pub fn suffix (self, suf: &'a str) -> BoxedParser<'a, T> {
+    pub fn suffix<'b> (self, suf: &'b str) -> BoxedParser<'a, T> {
         BoxedParser::new( suffix(suf, self) )
     }
+    pub fn surround<'b> (self, a: &'b str, b: &'b str) -> BoxedParser<'a, T> {
+        BoxedParser::new( surround(a, b, self) )
+    }
 }
-impl<'a, T> Parser<'a, T> for BoxedParser<'a, T> {
-    fn parse (&self, buf: &'a str) -> ParseRes<'a, T> {
+impl<'b, T> Parser<T> for BoxedParser<'b, T> {
+    fn parse<'a> (&self, buf: &'a str) -> ParseRes<'a, T> {
         self.parser.parse(buf)
     }
 }
 
 #[cfg(test)]
-impl<'a, T> BoxedParser<'a, T> {
-    fn test (&self, buf: &'a str) -> T {
+impl<'b, T> BoxedParser<'b, T> {
+    fn test<'a> (&self, buf: &'a str) -> T {
         self.parser.parse(buf).unwrap().1
     }
 }
+
+unsafe impl<'a, T> Send for BoxedParser<'a, T> {} 
+unsafe impl<'a, T> Sync for BoxedParser<'a, T> {} 

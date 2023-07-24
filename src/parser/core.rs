@@ -1,49 +1,66 @@
 use super::*;
 
-pub fn option<'a, T, P> (p: P) -> impl Parser<'a, Option<T>>
-where 
-    P: Parser<'a, T>
+
+pub fn bind<F, T>(f: F) -> F
+where
+    F: for<'a> Fn(&'a str) -> ParseRes<'a, T>,
 {
-    move |buf| {
+    f
+}
+fn bind2<'t, F, T>(f: F) -> F
+where
+    F: Fn(&'t str) -> ParseRes<'t, T>,
+{
+    f
+}
+
+pub fn option<T, P> (p: P) -> impl Parser<Option<T>>
+where 
+    P: Parser<T>
+{
+    bind(move |buf: & str| {
         if let Ok((buf, o)) = p.parse(buf) {
             Ok((buf, Some(o)))
         } else {
             Ok((buf, None))
         }
-    }
+    })
 }
 
-pub fn and<'a, A, B, PA, PB> (a: PA, b: PB) -> impl Parser<'a, (A, B)> 
+pub fn and<'a, A, B, PA, PB> (a: PA, b: PB) -> impl Parser<(A, B)> 
 where
-    PA: Parser<'a, A>,
-    PB: Parser<'a, B>,
+    PA: Parser<A>,
+    PB: Parser<B>,
 {
-    move |buf| {
+    bind(move |buf| {
         a.parse(buf)
             .and_then(|(buf, res_a)| 
                 b.parse(buf)
                     .map(|(buf, res_b)| (buf, (res_a, res_b) ))
             )
-    }
+    })
 }
 
-pub fn or<'a, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, A>
+pub fn or<'a, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<A>
 where
-    P1: Parser<'a, A>,
-    P2: Parser<'a, A>,
+    P1: Parser<A>,
+    P2: Parser<A>,
 {
-    move |input| match parser1.parse(input) {
+    bind(move |input| match parser1.parse(input) {
         ok @ Ok(_) => ok,
-        Err(_) => parser2.parse(input),
-    }
+        Err(e) => {
+            println!("option one failed with: {:?}", e);
+            parser2.parse(input)
+        },
+    })
 } 
 
 
-pub fn zero_or_more<'a, A, P> (p: P) -> impl Parser<'a, Vec<A>> 
+pub fn zero_or_more<'a, A, P> (p: P) -> impl Parser<Vec<A>> 
 where
-    P: Parser<'a, A>
+    P: Parser<A>
 {
-    move |buf| {
+    bind(move |buf| {
         let mut v = vec![];
         let mut buf_out = buf;
         while let Ok((buf, out)) = p.parse(buf_out) {
@@ -52,14 +69,14 @@ where
             buf_out = buf;
         }
         Ok((buf_out, v))
-    }
+    })
 }
 
-pub fn one_or_more<'a, A, P> (p: P) -> impl Parser<'a, Vec<A>> 
+pub fn one_or_more<'a, A, P> (p: P) -> impl Parser<Vec<A>> 
 where
-    P: Parser<'a, A>
+    P: Parser<A>
 {
-    move |buf| {
+    bind(move |buf| {
         let mut v = vec![];
         let mut buf_out = buf;
         while let Ok((buf, out)) = p.parse(buf_out) {
@@ -72,12 +89,12 @@ where
         } else {
             Ok((buf_out, v))
         }
-    }
+    })
 }
 
-pub fn prefix<'a, T, P> (s: &'a str, p: P) -> impl Parser<'a, T> 
+pub fn prefix<'a, T, P> (s: &'a str, p: P) -> impl Parser<T>
 where
-    P: Parser<'a, T>
+    P: Parser<T>
 {
     map( 
         and(
@@ -88,9 +105,9 @@ where
     )
 }
 
-pub fn suffix<'a, T, P> (s: &'a str, p: P) -> impl Parser<'a, T> 
+pub fn suffix<'a, T, P> (s: &'a str, p: P) -> impl Parser<T> 
 where
-    P: Parser<'a, T>
+    P: Parser<T>
 {
     map( 
         and(
@@ -101,9 +118,9 @@ where
     )
 }
 
-pub fn surround<'a, T, P> (a: &'a str, b: &'a str, p: P) -> impl Parser<'a, T> 
+pub fn surround<'a, T, P> (a: &'a str, b: &'a str, p: P) -> impl Parser<T> 
 where
-    P: Parser<'a, T>
+    P: Parser<T>
 {
     prefix(
         a, 
@@ -111,31 +128,33 @@ where
     )
 }
 
-pub fn parse_literal<'a> (lit: &'a str) -> impl Parser<'a, &str> {
-    move |buf: &'a str| match buf.get(0..lit.len()) {
-        Some(s) if s == lit => Ok((&buf[lit.len()..], lit)),
+pub fn parse_literal (lit: &str) -> impl Parser<String> {
+    let lit = lit.to_owned();
+    bind(move |buf: & str| match buf.get(0..lit.len()) {
+        Some(s) if s == lit => Ok((&buf[lit.len()..], lit.clone())),
         _ => par_err_s(buf, format!("Literal '{}' not found", lit))
-    } 
+    })
 }
 
 
-pub fn parse_literals<'a> (lits: Vec<&'a str>) -> impl Parser<'a, &str> {
-    move |buf: &'a str| {
+pub fn parse_literals (lits: Vec<&str>) -> impl Parser<String> {
+    let lits: Vec<String> = lits.into_iter().map(|s| s.to_owned()).collect();
+    bind(move |buf: &str| {
         for lit in lits.iter() {
             match buf.get(0..lit.len()) {
-                Some(s) if &s == lit => return Ok((&buf[lit.len()..], &buf[0..lit.len()])),
+                Some(s) if &s == lit => return Ok((&buf[lit.len()..], lit.clone())),
                 _ => continue
             }
         }
         par_err_s(buf, format!("Literal '{:?}' not found", lits))
-    }
+    })
 }
 
-pub fn parse_tok_with_rule<'a, R> (rule: R) -> impl Parser<'a, String> 
+pub fn parse_tok_with_rule<R> (rule: R) -> impl Parser<String> 
 where
     R: Fn (char) -> bool
 {
-    move |buf: &'a str| {
+    bind(move |buf: &str| {
         let mut tok = String::new();
         let mut iter = buf.chars();
 
@@ -153,47 +172,45 @@ where
         } else {
             Ok((&buf[tok.len()..], tok))
         }
+    })
+}
+
+
+pub fn parse_number<'a> (buf: &'a str) -> ParseRes<'a, f64> {
+    let num_rule = |c: char| {
+        c.is_ascii_digit() || c == '.'
+    };
+    let (buf, tok) = parse_tok_with_rule(num_rule).parse(buf)?;
+    if let Ok(num) = tok.parse::<f64>() {
+        Ok((buf, num))
+    } else {
+        par_err(buf, "could not parse into number")
     }
 }
 
 
-pub fn parse_number<'a> () -> impl Parser<'a, f64> {
-    move |buf: &'a str| {
-        let num_rule = |c: char| {
-            c.is_ascii_digit() || c == '.'
-        };
-        let (buf, tok) = parse_tok_with_rule(num_rule).parse(buf)?;
-        if let Ok(num) = tok.parse::<f64>() {
-            Ok((buf, num))
-        } else {
-            par_err(buf, "could not parse into number")
-        }
-    }
+pub fn parse_identifier<'a> (buf: &'a str) -> ParseRes<'a, String> {
+    let rule = |c: char| {
+        c.is_alphanumeric() || c == '_'
+    };
+    let (buf, tok) = parse_tok_with_rule(rule).parse(buf)?;
+
+    if tok.chars().next().unwrap().is_ascii_digit() { return par_err(buf, "identifier cannot start with digit") }
+    if KEYWORDS.contains(&tok.as_str())             { return par_err(buf, "found keyword, cannot be used as identifier") }
+
+    Ok((buf, tok))
 }
 
-pub fn parse_identifier<'a> () -> impl Parser<'a, String> {
-    move |input: &'a str| {
-        let rule = |c: char| {
-            c.is_alphanumeric() || c == '_'
-        };
-        let (buf, tok) = parse_tok_with_rule(rule).parse(input)?;
 
-        if tok.chars().next().unwrap().is_ascii_digit() { return par_err(buf, "identifier cannot start with digit") }
-        if KEYWORDS.contains(&tok.as_str())             { return par_err(buf, "found keyword, cannot be used as identifier") }
-
-        Ok((buf, tok))
-    }
-}
-
-pub fn map<'a, A, B, P, F> (parser: P, functor: F) -> impl Parser<'a, B> 
+pub fn map<'a, A, B, P, F> (parser: P, functor: F) -> impl Parser<B> 
 where 
-    P: Parser<'a, A>,
+    P: Parser<A>,
     F: Fn(A) -> B,
 {
-    move |buf: &'a str| -> ParseRes<'a, B> {
+    bind(move |buf: &str| -> ParseRes<B> {
         parser.parse(buf)
             .map(|(b, out): (&str, A)| (b, functor(out)))
-    }
+    })
 }
 
 const KEYWORDS: [&str; 4] = [
